@@ -9,9 +9,10 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName("sell")
     .setDescription("بيع أعضاء (Admin فقط)")
-    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
+    .setDefaultMemberPermissions(Permissions.FLAGS.ADMINISTRATOR)
     .addIntegerOption(opt =>
-      opt.setName("members")
+      opt
+        .setName("members")
         .setDescription("عدد الأعضاء")
         .setRequired(true)
     ),

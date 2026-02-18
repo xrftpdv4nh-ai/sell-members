@@ -6,9 +6,9 @@ module.exports = {
     ClientId: "1279423025980112988", // Clietn Id
     serverinvte: "", // Server invite url
     clientSECRET: "hcOZiiMkVIx5kTDfNtEx-1QLm5GZuHl4", // Client Secret
-    callbackURL: "sell-members-production.up.railway.app", // Call Back Url
+    callbackURL: "https://sell-members-production.up.railway.app/login", // Call Back Url
     inviteBotUrl: "https://discord.com/oauth2/authorize?client_id=1279423025980112988&permissions=8&integration_type=0&scope=bot",// Link Invite Bot
-    verifylink: "",// Verification Bot
+    verifylink: "https://sell-members-production.up.railway.app/login",
     category: "",// Ticket Category
     probotid: "",// ProBot Id
     transferid: "",// Id of the person to whom the balance is being transferred

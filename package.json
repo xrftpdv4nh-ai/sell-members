@@ -6,6 +6,9 @@
   "scripts": {
     "start": "node index.js"
   },
+  "engines": {
+    "node": ">=16.9.0"
+  },
   "dependencies": {
     "discord.js": "^13.16.0",
     "dotenv": "^16.3.1",
@@ -13,6 +16,6 @@
     "express-session": "^1.17.3",
     "passport": "^0.6.0",
     "passport-discord": "^0.1.4",
-    "st.db": "^1.1.2"
+    "st.db": "1.0.9"
   }
 }

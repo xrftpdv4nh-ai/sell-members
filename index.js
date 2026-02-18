@@ -8,9 +8,14 @@ const {
   TextInputComponent
 } = require("discord.js");
 
-const fs = require("fs");
-const path = require("path");
+const DiscordOauth2 = require("discord-oauth2");
+const config = require("./config.js");
 
+const oauth = new DiscordOauth2({
+  clientId: config.bot.botID,
+  clientSecret: config.bot.clientSECRET,
+  redirectUri: config.bot.callbackURL,
+});
 /* ================= CLIENT ================= */
 
 const client = new Client({

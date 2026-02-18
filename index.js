@@ -217,6 +217,34 @@ client.on("interactionCreate", async (interaction) => {
   }
 });
 
+client.on("interactionCreate", async (interaction) => {
+  if (!interaction.isButton()) return;
+
+  if (interaction.customId === "buy") {
+    const modal = new Modal()
+      .setCustomId("buy_modal")
+      .setTitle("شراء أعضاء 👥");
+
+    const serverIdInput = new TextInputComponent()
+      .setCustomId("server_id")
+      .setLabel("ايدي السيرفر")
+      .setStyle("SHORT")
+      .setRequired(true);
+
+    const amountInput = new TextInputComponent()
+      .setCustomId("members_amount")
+      .setLabel("عدد الأعضاء")
+      .setStyle("SHORT")
+      .setRequired(true);
+
+    const row1 = new MessageActionRow().addComponents(serverIdInput);
+    const row2 = new MessageActionRow().addComponents(amountInput);
+
+    modal.addComponents(row1, row2);
+
+    await interaction.showModal(modal);
+  }
+});
 /* ================= READY ================= */
 
 client.on("ready", () => {

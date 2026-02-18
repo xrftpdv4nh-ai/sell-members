@@ -1,11 +1,10 @@
-const { SlashCommandBuilder } = require("@discordjs/builders");
+const { SlashCommandBuilder } = require("discord.js");
 const Database = require("st.db");
 const path = require("path");
 
-const usersdata = new Database({
-  path: path.join(__dirname, "../../database/users.json"),
-  databaseInObject: true,
-});
+const usersdata = new Database(
+  path.join(__dirname, "../../database/users.json")
+);
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -16,8 +15,7 @@ module.exports = {
     const stock = usersdata.all().length;
 
     await interaction.reply({
-      content: `📦 **Stock الحالي:** ${stock} عضو`,
-      ephemeral: false
+      content: `📦 **Stock الحالي:** ${stock} عضو`
     });
   }
 };

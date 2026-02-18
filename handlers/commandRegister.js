@@ -1,7 +1,5 @@
 const fs = require("fs");
 const path = require("path");
-const { REST, Routes } = require("discord.js");
-const config = require("../config");
 
 module.exports = async (client) => {
   const commands = [];
@@ -13,15 +11,12 @@ module.exports = async (client) => {
     commands.push(command.data.toJSON());
   }
 
-  const rest = new REST({ version: "10" }).setToken(process.env.token);
-
-  try {
-    await rest.put(
-      Routes.applicationCommands(config.bot.botID),
-      { body: commands }
-    );
-    console.log("✅ Slash commands registered automatically");
-  } catch (err) {
-    console.error("❌ Command register error:", err);
-  }
+  client.once("ready", async () => {
+    try {
+      await client.application.commands.set(commands);
+      console.log("✅ Slash commands registered (v13)");
+    } catch (err) {
+      console.error("❌ Failed to register slash commands:", err);
+    }
+  });
 };

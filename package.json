@@ -1,0 +1,18 @@
+{
+  "name": "sell-members",
+  "version": "1.0.0",
+  "description": "Discord bot with OAuth & member selling system",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "discord.js": "^13.16.0",
+    "dotenv": "^16.3.1",
+    "express": "^4.19.2",
+    "express-session": "^1.17.3",
+    "passport": "^0.6.0",
+    "passport-discord": "^0.1.4",
+    "st.db": "^1.1.2"
+  }
+}

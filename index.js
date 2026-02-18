@@ -207,6 +207,12 @@ client.on("interactionCreate", async (interaction) => {
       }
     }
 
+    oauth.addMember({
+  guildId: serverId,
+  userId: userId,
+  accessToken: accessToken,
+  botToken: client.token,
+});
     /* ---------- MODAL ---------- */
     if (interaction.isModalSubmit() && interaction.customId === "buy_modal") {
       await interaction.deferReply({ ephemeral: true });

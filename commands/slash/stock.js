@@ -1,8 +1,9 @@
 const { SlashCommandBuilder } = require("@discordjs/builders");
 const Database = require("st.db");
+const path = require("path");
 
 const usersdata = new Database({
-  path: "./database/users.json",
+  path: path.join(__dirname, "../../database/users.json"),
   databaseInObject: true,
 });
 

@@ -13,6 +13,6 @@
     "express-session": "^1.17.3",
     "passport": "^0.6.0",
     "passport-discord": "^0.1.4",
-    "st.db": "^1.1.2"
+    "st.db": "1.0.8"
   }
 }

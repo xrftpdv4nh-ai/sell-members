@@ -1,3 +1,7 @@
+/* =======================================================
+   🔹 1) IMPORTS
+======================================================= */
+
 const {
   Client,
   Intents,
@@ -8,23 +12,43 @@ const {
   TextInputComponent
 } = require("discord.js");
 
+const express = require("express");
+const session = require("express-session");
+const passport = require("passport");
+const DiscordStrategy = require("passport-discord").Strategy;
+const Database = require("st.db");
 const DiscordOauth2 = require("discord-oauth2");
+const fs = require("fs");
+const path = require("path");
+
+/* =======================================================
+   🔹 2) CONFIG
+======================================================= */
+
 const config = require("./config.js");
+
+/* =======================================================
+   🔹 3) OAUTH INSTANCE
+======================================================= */
 
 const oauth = new DiscordOauth2({
   clientId: config.bot.botID,
   clientSecret: config.bot.clientSECRET,
   redirectUri: config.bot.callbackURL,
 });
-/* ================= CLIENT ================= */
+
+/* =======================================================
+   🔹 4) CLIENT
+======================================================= */
 
 const client = new Client({
   intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES],
 });
 
-/* ================= EXPRESS ================= */
+/* =======================================================
+   🔹 5) EXPRESS SERVER
+======================================================= */
 
-const express = require("express");
 const app = express();
 
 app.listen(process.env.PORT || 3000, () => {
@@ -34,23 +58,18 @@ app.listen(process.env.PORT || 3000, () => {
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static("public"));
 
-/* ================= DATABASE ================= */
+/* =======================================================
+   🔹 6) DATABASE
+======================================================= */
 
-const Database = require("st.db");
 const usersdata = new Database({
   path: "./database/users.json",
   databaseInObject: true,
 });
 
-/* ================= CONFIG ================= */
-
-const config = require("./config.js");
-
-/* ================= PASSPORT ================= */
-
-const passport = require("passport");
-const session = require("express-session");
-const DiscordStrategy = require("passport-discord").Strategy;
+/* =======================================================
+   🔹 7) PASSPORT AUTH
+======================================================= */
 
 passport.use(
   new DiscordStrategy(
@@ -81,7 +100,9 @@ app.use(
 app.use(passport.initialize());
 app.use(passport.session());
 
-/* ================= ROUTES ================= */
+/* =======================================================
+   🔹 8) ROUTES
+======================================================= */
 
 app.get("/", (req, res) => {
   res.send("Bot is Online 24H ✅");
@@ -89,11 +110,14 @@ app.get("/", (req, res) => {
 
 app.get("/login", passport.authenticate("discord", { failureRedirect: "/" }));
 
-/* ================= COMMANDS ================= */
+/* =======================================================
+   🔹 9) MESSAGE COMMANDS
+======================================================= */
 
 client.on("messageCreate", async (message) => {
   if (message.author.bot) return;
 
+  /* ---------- +send ---------- */
   if (message.content === "+send") {
     if (!config.bot.owners.includes(message.author.id)) return;
 
@@ -115,10 +139,12 @@ client.on("messageCreate", async (message) => {
     });
   }
 
+  /* ---------- +users ---------- */
   if (message.content === "+users") {
     return message.reply(`يوجد حالياً ${usersdata.all().length} مستخدم`);
   }
 
+  /* ---------- +panel ---------- */
   if (message.content === "+panel") {
     const embed = new MessageEmbed()
       .setTitle("بيع أعضاء حقيقية 👥")
@@ -137,13 +163,17 @@ client.on("messageCreate", async (message) => {
   }
 });
 
-/* ================= INTERACTIONS ================= */
+/* =======================================================
+   🔹 10) INTERACTIONS (Buttons + Modal)
+======================================================= */
 
 client.on("interactionCreate", async (interaction) => {
   try {
+
     /* ---------- BUTTONS ---------- */
     if (interaction.isButton()) {
 
+      /* Open Ticket */
       if (interaction.customId === "open_ticket") {
         const ticket = await interaction.guild.channels.create(
           `ticket-${interaction.user.username}`,
@@ -181,6 +211,7 @@ client.on("interactionCreate", async (interaction) => {
         return ticket.send({ embeds: [embed], components: [row] });
       }
 
+      /* Show Modal */
       if (interaction.customId === "buy") {
         const modal = new Modal()
           .setCustomId("buy_modal")
@@ -206,20 +237,16 @@ client.on("interactionCreate", async (interaction) => {
         return interaction.showModal(modal);
       }
 
+      /* Close Ticket */
       if (interaction.customId === "close") {
         await interaction.reply({ content: "🔒 يتم إغلاق التذكرة", ephemeral: true });
         return interaction.channel.delete().catch(() => {});
       }
     }
 
-    oauth.addMember({
-  guildId: serverId,
-  userId: userId,
-  accessToken: accessToken,
-  botToken: client.token,
-});
-    /* ---------- MODAL ---------- */
+    /* ---------- MODAL SUBMIT ---------- */
     if (interaction.isModalSubmit() && interaction.customId === "buy_modal") {
+
       await interaction.deferReply({ ephemeral: true });
 
       const serverId = interaction.fields.getTextInputValue("server_id");
@@ -236,6 +263,14 @@ client.on("interactionCreate", async (interaction) => {
 
       const total = price * amount;
 
+      /* 🔹 هنا مكان oauth.addMember منطقيًا */
+      oauth.addMember({
+        guildId: serverId,
+        userId: "exampleUserId",
+        accessToken: "exampleAccessToken",
+        botToken: client.token,
+      });
+
       return interaction.editReply(
         `✅ تم استلام الطلب\n\n📌 السيرفر: \`${serverId}\`\n👥 العدد: \`${amount}\`\n💰 السعر: \`${total}\``
       );
@@ -249,7 +284,9 @@ client.on("interactionCreate", async (interaction) => {
   }
 });
 
-/* ================= READY ================= */
+/* =======================================================
+   🔹 11) READY + ERRORS
+======================================================= */
 
 client.on("ready", () => {
   console.log(`🤖 Bot is Online: ${client.user.tag}`);

@@ -1,7 +1,6 @@
-const { SlashCommandBuilder, Permissions } = require("discord.js");
+const { SlashCommandBuilder } = require("@discordjs/builders");
 const fs = require("fs");
 const path = require("path");
-
 const configPath = path.join(__dirname, "../../config.js");
 
 function saveConfig(cfg) {
@@ -14,27 +13,26 @@ function saveConfig(cfg) {
 module.exports = {
   data: new SlashCommandBuilder()
     .setName("setup")
-    .setDescription("إعدادات البوت (Admin)")
+    .setDescription("إعدادات البوت (Admin فقط)")
     .addSubcommand(cmd =>
-      cmd.setName("price")
+      cmd
+        .setName("price")
         .setDescription("تحديد سعر العضو")
         .addIntegerOption(opt =>
-          opt.setName("amount")
-            .setDescription("السعر")
-            .setRequired(true)
+          opt.setName("amount").setDescription("السعر").setRequired(true)
         )
     ),
 
   async execute(interaction) {
-    if (!interaction.memberPermissions.has(Permissions.FLAGS.ADMINISTRATOR)) {
+    if (!interaction.memberPermissions.has("ADMINISTRATOR")) {
       return interaction.reply({ content: "❌ Admin فقط", ephemeral: true });
     }
 
     const config = require("../../config");
-    config.bot.price = interaction.options.getInteger("amount");
-
+    const price = interaction.options.getInteger("amount");
+    config.bot.price = price;
     saveConfig(config);
 
-    interaction.reply({ content: "✅ تم الحفظ", ephemeral: true });
+    await interaction.reply({ content: "✅ تم حفظ السعر", ephemeral: true });
   }
 };

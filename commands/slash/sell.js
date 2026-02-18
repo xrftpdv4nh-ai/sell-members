@@ -1,24 +1,22 @@
-const { SlashCommandBuilder, Permissions } = require("discord.js");
+const { SlashCommandBuilder } = require("@discordjs/builders");
 const Database = require("st.db");
-const path = require("path");
 const config = require("../../config");
 
-const usersdata = new Database(
-  path.join(__dirname, "../../database/users.json")
-);
+const usersdata = new Database("./database/users.json");
 
 module.exports = {
   data: new SlashCommandBuilder()
     .setName("sell")
     .setDescription("بيع أعضاء (Admin فقط)")
     .addIntegerOption(opt =>
-      opt.setName("members")
+      opt
+        .setName("members")
         .setDescription("عدد الأعضاء")
         .setRequired(true)
     ),
 
   async execute(interaction) {
-    if (!interaction.memberPermissions.has(Permissions.FLAGS.ADMINISTRATOR)) {
+    if (!interaction.memberPermissions.has("ADMINISTRATOR")) {
       return interaction.reply({ content: "❌ Admin فقط", ephemeral: true });
     }
 
@@ -40,7 +38,7 @@ module.exports = {
     const total = amount * price;
 
     await interaction.reply(
-      `🛒 **طلب بيع**\n👥 العدد: ${amount}\n📦 المتاح: ${stock}\n💰 السعر: ${total}`
+      `🛒 **طلب بيع**\n\n👥 العدد: ${amount}\n📦 الستوك: ${stock}\n💰 السعر: ${total}`
     );
   }
 };

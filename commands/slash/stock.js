@@ -1,0 +1,21 @@
+const { SlashCommandBuilder } = require("discord.js");
+const Database = require("st.db");
+
+const usersdata = new Database({
+  path: "./database/users.json",
+  databaseInObject: true,
+});
+
+module.exports = {
+  data: new SlashCommandBuilder()
+    .setName("stock")
+    .setDescription("عرض عدد الأعضاء المتاحين"),
+
+  async execute(interaction) {
+    const stock = usersdata.all().length;
+
+    await interaction.reply(
+      `📦 **Stock الحالي:** ${stock} عضو`
+    );
+  }
+};

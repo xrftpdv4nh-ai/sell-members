@@ -1,6 +1,6 @@
 module.exports = {
   bot: {
-    owners: ["1035345058561540127" , ""],// owners id
+    owners: ["1035345058561540127"],// owners id
     botID: "1279423025980112988",// bot id
     GuildId: "1275275223431647355", // Your Server Id
     ClientId: "1279423025980112988", // Clietn Id

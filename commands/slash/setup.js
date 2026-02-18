@@ -1,13 +1,11 @@
-const {
-  SlashCommandBuilder,
-  PermissionFlagsBits
-} = require("discord.js");
-
+const { SlashCommandBuilder } = require("@discordjs/builders");
+const { Permissions } = require("discord.js");
 const fs = require("fs");
 const path = require("path");
 
 const configPath = path.join(__dirname, "../../config.js");
 
+/* حفظ الكونفيج */
 function saveConfig(newConfig) {
   fs.writeFileSync(
     configPath,
@@ -19,39 +17,50 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName("setup")
     .setDescription("إعدادات البوت (Admin فقط)")
-    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
+    .setDefaultMemberPermissions(Permissions.FLAGS.ADMINISTRATOR)
 
+    /* ===== CATEGORY ===== */
     .addSubcommand(cmd =>
-      cmd.setName("category")
+      cmd
+        .setName("category")
         .setDescription("تحديد كاتيجوري التيكت")
         .addChannelOption(opt =>
-          opt.setName("channel")
+          opt
+            .setName("channel")
             .setDescription("Category")
             .setRequired(true)
         )
     )
 
+    /* ===== LOGS ===== */
     .addSubcommand(cmd =>
-      cmd.setName("logs")
+      cmd
+        .setName("logs")
         .setDescription("تحديد روم اللوجز")
         .addChannelOption(opt =>
-          opt.setName("channel")
+          opt
+            .setName("channel")
             .setDescription("Logs channel")
             .setRequired(true)
         )
     )
 
+    /* ===== PRICE ===== */
     .addSubcommand(cmd =>
-      cmd.setName("price")
+      cmd
+        .setName("price")
         .setDescription("تحديد سعر العضو")
         .addIntegerOption(opt =>
-          opt.setName("amount")
+          opt
+            .setName("amount")
             .setDescription("سعر العضو الواحد")
             .setRequired(true)
         )
     ),
 
   async execute(interaction) {
+    // نعمل require جوه علشان الكاش يتحدث
+    delete require.cache[require.resolve("../../config")];
     const config = require("../../config");
 
     const sub = interaction.options.getSubcommand();

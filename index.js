@@ -11,7 +11,7 @@ const path = require("path");
 const express = require("express");
 
 /* ================== CONFIG ================== */
-const BOT_TOKEN = "PUT_YOUR_BOT_TOKEN_HERE"; // 👈 حط التوكن هنا
+const BOT_TOKEN = "MTI3OTQyMzAyNTk4MDExMjk4OA.G6xN8l.4uaBD67VmotKk-r5RO2VdK2zDYvSO4rhfIBHjU"; // 👈 حط التوكن هنا فقط
 const PREFIX = "+";
 
 /* ================== CLIENT ================== */
@@ -45,19 +45,22 @@ function getUsers() {
 client.once("ready", async () => {
   console.log(`🤖 Bot Online: ${client.user.tag}`);
 
-  // تسجيل أوامر السلاش
-  await client.application.commands.set([
-    {
-      name: "stock",
-      description: "عرض عدد المستخدمين المسجلين"
-    },
-    {
-      name: "panel",
-      description: "عرض لوحة تجريبية"
-    }
-  ]);
+  try {
+    await client.application.commands.set([
+      {
+        name: "stock",
+        description: "عرض عدد المستخدمين"
+      },
+      {
+        name: "panel",
+        description: "عرض لوحة تجريبية"
+      }
+    ]);
 
-  console.log("✅ Slash commands registered");
+    console.log("✅ Slash commands registered");
+  } catch (err) {
+    console.error("❌ Slash register error:", err);
+  }
 });
 
 /* ================== PREFIX COMMANDS ================== */
@@ -92,7 +95,6 @@ client.on("messageCreate", async (message) => {
 client.on("interactionCreate", async (interaction) => {
   if (!interaction.isCommand()) return;
 
-  /* /stock */
   if (interaction.commandName === "stock") {
     const count = Object.keys(getUsers()).length;
     return interaction.reply({
@@ -101,18 +103,17 @@ client.on("interactionCreate", async (interaction) => {
     });
   }
 
-  /* /panel */
   if (interaction.commandName === "panel") {
     const embed = new MessageEmbed()
       .setTitle("لوحة تجريبية 🧪")
-      .setDescription("دي مجرد تجربة سلاش شغالة")
+      .setDescription("السلاش شغال تمام ✅")
       .setColor("#0099ff");
 
     const row = new MessageActionRow().addComponents(
       new MessageButton()
+        .setCustomId("test_button")
         .setLabel("زر تجريبي")
         .setStyle("SECONDARY")
-        .setCustomId("test_button")
     );
 
     return interaction.reply({
@@ -129,7 +130,7 @@ client.on("interactionCreate", async (interaction) => {
 
   if (interaction.customId === "test_button") {
     return interaction.reply({
-      content: "✅ الزر شغال تمام",
+      content: "✅ الزر شغال",
       ephemeral: true
     });
   }
@@ -140,4 +141,4 @@ process.on("unhandledRejection", console.error);
 process.on("uncaughtException", console.error);
 
 /* ================== LOGIN ================== */
-client.login("MTI3OTQyMzAyNTk4MDExMjk4OA.G6xN8l.4uaBD67VmotKk-r5RO2VdK2zDYvSO4rhfIBHjU");
+client.login(BOT_TOKEN);

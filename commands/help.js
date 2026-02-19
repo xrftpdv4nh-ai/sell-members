@@ -1,11 +1,13 @@
+const config = require("../config");
+
 module.exports = {
   name: "help",
-  execute(message) {
+  run: async (client, message) => {
     message.reply(
-      `**الأوامر المتاحة:**\n` +
-      `+panel\n` +
-      `+ping\n` +
-      `+help`
+      `📖 **قائمة الأوامر:**\n\n` +
+      `\`${config.prefix}ping\` ➜ اختبار البوت\n` +
+      `\`${config.prefix}panel\` ➜ لوحة شراء الأعضاء\n` +
+      `\`${config.prefix}help\` ➜ عرض الأوامر`
     );
   }
 };

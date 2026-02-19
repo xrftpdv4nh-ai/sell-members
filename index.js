@@ -12,6 +12,8 @@ const express = require("express");
 
 /* ================== CONFIG ================== */
 const PREFIX = "+";
+const BOT_TOKEN = process.env.BOT_TOKEN; 
+// 👆 التوكن يتحط في Railway Variables باسم BOT_TOKEN
 
 /* ================== CLIENT ================== */
 const client = new Client({
@@ -26,7 +28,7 @@ const app = express();
 app.get("/", (req, res) => {
   res.send("Bot Online 24/7 ✅");
 });
-app.listen(3000, () => {
+app.listen(process.env.PORT || 3000, () => {
   console.log("🌍 Website Online");
 });
 
@@ -41,25 +43,8 @@ function getUsers() {
 }
 
 /* ================== READY ================== */
-client.once("ready", async () => {
+client.once("ready", () => {
   console.log(`🤖 Bot Online: ${client.user.tag}`);
-
-  try {
-    await client.application.commands.set([
-      {
-        name: "stock",
-        description: "عرض عدد المستخدمين"
-      },
-      {
-        name: "panel",
-        description: "عرض لوحة تجريبية"
-      }
-    ]);
-
-    console.log("✅ Slash commands registered");
-  } catch (err) {
-    console.error("❌ Slash register error:", err);
-  }
 });
 
 /* ================== PREFIX COMMANDS ================== */
@@ -70,42 +55,22 @@ client.on("messageCreate", async (message) => {
   const args = message.content.slice(PREFIX.length).trim().split(/ +/);
   const command = args.shift().toLowerCase();
 
+  /* +ping */
   if (command === "ping") {
     return message.reply("🏓 Pong!");
   }
 
-  if (command === "users") {
+  /* +users / +stock */
+  if (command === "users" || command === "stock") {
     const count = Object.keys(getUsers()).length;
-    return message.reply(`📦 عدد المستخدمين: ${count}`);
+    return message.reply(`📦 عدد المستخدمين الحالي: ${count}`);
   }
 
-  if (command === "help") {
-    return message.reply(
-      `**الأوامر:**\n` +
-      `+ping\n` +
-      `+users\n` +
-      `/stock\n` +
-      `/panel`
-    );
-  }
-});
-
-/* ================== SLASH COMMANDS ================== */
-client.on("interactionCreate", async (interaction) => {
-  if (!interaction.isCommand()) return;
-
-  if (interaction.commandName === "stock") {
-    const count = Object.keys(getUsers()).length;
-    return interaction.reply({
-      content: `📦 **الستوك الحالي:** ${count}`,
-      ephemeral: true
-    });
-  }
-
-  if (interaction.commandName === "panel") {
+  /* +panel */
+  if (command === "panel") {
     const embed = new MessageEmbed()
-      .setTitle("لوحة تجريبية 🧪")
-      .setDescription("السلاش شغال تمام ✅")
+      .setTitle("لوحة التحكم 🧩")
+      .setDescription("دي لوحة تجريبية بنظام Prefix فقط")
       .setColor("#0099ff");
 
     const row = new MessageActionRow().addComponents(
@@ -115,11 +80,21 @@ client.on("interactionCreate", async (interaction) => {
         .setStyle("SECONDARY")
     );
 
-    return interaction.reply({
+    return message.channel.send({
       embeds: [embed],
-      components: [row],
-      ephemeral: true
+      components: [row]
     });
+  }
+
+  /* +help */
+  if (command === "help") {
+    return message.reply(
+      `**الأوامر المتاحة:**\n` +
+      `+ping\n` +
+      `+users\n` +
+      `+stock\n` +
+      `+panel`
+    );
   }
 });
 
@@ -129,7 +104,7 @@ client.on("interactionCreate", async (interaction) => {
 
   if (interaction.customId === "test_button") {
     return interaction.reply({
-      content: "✅ الزر شغال",
+      content: "✅ الزر شغال تمام",
       ephemeral: true
     });
   }
@@ -140,4 +115,4 @@ process.on("unhandledRejection", console.error);
 process.on("uncaughtException", console.error);
 
 /* ================== LOGIN ================== */
-client.login(process.env.BOT_TOKEN);
+client.login(BOT_TOKEN);

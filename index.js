@@ -140,4 +140,4 @@ process.on("unhandledRejection", console.error);
 process.on("uncaughtException", console.error);
 
 /* ================== LOGIN ================== */
-client.login(BOT_TOKEN);
+client.login(process.env.BOT_TOKEN);

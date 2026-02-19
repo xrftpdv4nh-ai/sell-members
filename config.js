@@ -1,7 +1,7 @@
 module.exports = {
   prefix: "+",
   ticket: {
-    categoryId: "PUT_CATEGORY_ID",
-    supportRoleId: "PUT_SUPPORT_ROLE_ID"
+    categoryId: "1474149798734073946",
+    supportRoleId: "1474149490360586340"
   }
 };

@@ -7,12 +7,12 @@ const {
   TextInputComponent
 } = require("discord.js");
 
-const config = require("./config");
 const fs = require("fs");
 const path = require("path");
+const config = require("./config");
 
 // ===== TOKEN =====
-const BOT_TOKEN = process.env.BOT_TOKEN;
+const BOT_TOKEN = process.env.BOT_TOKEN; 
 if (!BOT_TOKEN) {
   console.error("❌ BOT_TOKEN is not defined");
   process.exit(1);
@@ -26,17 +26,15 @@ const client = new Client({
   ],
 });
 
-client.commands = new Map();
-
 // ===== DATABASE =====
 const dbPath = path.join(__dirname, "database", "data.json");
 
 if (!fs.existsSync("database")) fs.mkdirSync("database");
 if (!fs.existsSync(dbPath)) {
-  fs.writeFileSync(
-    dbPath,
-    JSON.stringify({ coinPrice: 0, users: {} }, null, 2)
-  );
+  fs.writeFileSync(dbPath, JSON.stringify({
+    coinPrice: 0,
+    users: {}
+  }, null, 2));
 }
 
 function getData() {
@@ -49,21 +47,16 @@ function saveData(data) {
 global.getData = getData;
 global.saveData = saveData;
 
-// ===== LOAD COMMANDS =====
-const commandsPath = path.join(__dirname, "commands");
-fs.readdirSync(commandsPath)
-  .filter(f => f.endsWith(".js"))
-  .forEach(file => {
-    const cmd = require(`./commands/${file}`);
-    client.commands.set(cmd.name, cmd);
-    console.log(`✅ Loaded command: ${cmd.name}`);
-  });
+// ===== READY =====
+client.once("ready", () => {
+  console.log(`✅ Bot Online: ${client.user.tag}`);
+});
 
 // ===== PREFIX COMMANDS =====
 client.on("messageCreate", async message => {
   if (message.author.bot) return;
 
-  // ===== أمر price (أدمن فقط) =====
+  // ===== ADMIN: price =====
   if (message.content.startsWith("price")) {
     if (message.author.id !== config.adminId)
       return message.reply("❌ الأمر ده للأدمن فقط");
@@ -77,40 +70,24 @@ client.on("messageCreate", async message => {
     data.coinPrice = price;
     saveData(data);
 
-    return message.reply(`✅ تم تحديد سعر الكوين = **${price}**`);
+    return message.reply(`✅ تم تحديد سعر الكوين = **${price} كريدت**`);
   }
 
-  // ===== أوامر بريفكس =====
-  if (!message.content.startsWith(config.prefix)) return;
-
-  const args = message.content.slice(config.prefix.length).trim().split(/ +/);
-  const commandName = args.shift().toLowerCase();
-  const command = client.commands.get(commandName);
-  if (!command) return;
-
-  try {
-    command.run(client, message, args);
-  } catch (err) {
-    console.error(err);
-    message.reply("❌ حصل خطأ");
+  // ===== +coins =====
+  if (message.content === `${config.prefix}coins`) {
+    const data = getData();
+    const coins = data.users[message.author.id]?.coins || 0;
+    return message.reply(`🪙 **رصيدك الحالي:** ${coins} كوين`);
   }
 });
 
 // ===== INTERACTIONS =====
 client.on("interactionCreate", async interaction => {
 
-  // ===== BUTTON =====
+  // ===== BUTTONS =====
   if (interaction.isButton()) {
 
-    if (interaction.customId === "open_ticket") {
-      return require("./tickets/ticketCreate")(interaction, client);
-    }
-
-    if (interaction.customId === "close_ticket") {
-      return require("./tickets/ticketClose")(interaction);
-    }
-
-    // ===== شراء رصيد =====
+    // شراء رصيد
     if (interaction.customId === "buy_balance") {
       const modal = new Modal()
         .setCustomId("buy_balance_modal")
@@ -118,9 +95,9 @@ client.on("interactionCreate", async interaction => {
 
       const amountInput = new TextInputComponent()
         .setCustomId("amount")
-        .setLabel("الكمية")
+        .setLabel("عدد الكوينز")
         .setStyle("SHORT")
-        .setPlaceholder("مثال: 100")
+        .setPlaceholder("مثال: 10")
         .setRequired(true);
 
       modal.addComponents(
@@ -129,9 +106,17 @@ client.on("interactionCreate", async interaction => {
 
       return interaction.showModal(modal);
     }
+
+    // غلق تكت
+    if (interaction.customId === "close_ticket") {
+      await interaction.reply("🗑️ سيتم غلق التذكرة...");
+      return setTimeout(() => {
+        interaction.channel.delete().catch(() => {});
+      }, 3000);
+    }
   }
 
-  // ===== MODAL =====
+  // ===== MODAL SUBMIT =====
   if (interaction.isModalSubmit()) {
     if (interaction.customId === "buy_balance_modal") {
       const amount = parseInt(
@@ -139,17 +124,11 @@ client.on("interactionCreate", async interaction => {
       );
 
       if (!amount || amount <= 0)
-        return interaction.reply({
-          content: "❌ الكمية غير صحيحة",
-          ephemeral: true
-        });
+        return interaction.reply({ content: "❌ الكمية غير صحيحة", ephemeral: true });
 
       const data = getData();
       if (!data.coinPrice || data.coinPrice <= 0)
-        return interaction.reply({
-          content: "❌ سعر الكوين لم يتم تحديده بعد",
-          ephemeral: true
-        });
+        return interaction.reply({ content: "❌ سعر الكوين غير محدد", ephemeral: true });
 
       const total = amount * data.coinPrice;
 
@@ -157,27 +136,70 @@ client.on("interactionCreate", async interaction => {
         embeds: [{
           color: 0xfacc15,
           description:
-`💳 **إكمال عملية شراء الرصيد**
+`💳 **إكمال شراء الرصيد**
 
-🔢 الكمية: **${amount} كوين**
-💰 السعر الإجمالي: **${total} كريدت**
+🪙 الكمية: **${amount} كوين**
+💰 السعر: **${total} كريدت**
 
 📩 الرجاء التحويل:
 \`\`\`
-#credit ${config.creditAccountId} ${total}
+#credit ${config.probot.creditAccountId} ${total}
 \`\`\`
 
-⏱️ لديك **5 دقائق** لإتمام التحويل  
-📌 التحويل يتم داخل نفس التكت`
+⏱️ لديك **5 دقائق** للتحويل`
         }]
       });
     }
   }
 });
 
-// ===== READY =====
-client.once("ready", () => {
-  console.log(`✅ Logged in as ${client.user.tag}`);
+// ===== PROBOT MONITOR =====
+client.on("messageCreate", async message => {
+  try {
+    if (message.author.id !== config.probot.id) return;
+    if (!message.content.includes("has transferred")) return;
+
+    if (!message.content.includes(config.probot.creditAccountId)) return;
+
+    const creditMatch = message.content.match(/`(\d+)`/);
+    if (!creditMatch) return;
+
+    const credits = parseInt(creditMatch[1]);
+
+    const userMatch = message.content.match(/\| (.*?), has transferred/);
+    if (!userMatch) return;
+
+    const username = userMatch[1];
+    const member = message.guild.members.cache.find(
+      m => m.user.username === username
+    );
+    if (!member) return;
+
+    const data = getData();
+    const coins = Math.floor(credits / data.coinPrice);
+    if (coins <= 0) return;
+
+    if (!data.users[member.id]) {
+      data.users[member.id] = { coins: 0 };
+    }
+
+    data.users[member.id].coins += coins;
+    saveData(data);
+
+    message.channel.send(
+`✅ **تم استلام التحويل**
+
+👤 ${member}
+💰 ${credits} كريدت
+🪙 ${coins} كوين
+
+📦 رصيدك الحالي:
+**${data.users[member.id].coins} كوين**`
+    );
+
+  } catch (err) {
+    console.error("❌ ProBot Error:", err);
+  }
 });
 
 // ===== LOGIN =====

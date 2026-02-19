@@ -1,29 +1,31 @@
-const { REST } = require("@discordjs/rest");
+const { REST } = require("discord.js");
 const { Routes } = require("discord-api-types/v9");
 const config = require("../config");
 
-module.exports = async (client) => {
-  const commands = [
-    {
-      name: "stock",
-      description: "عرض عدد الأعضاء المتاحين",
-    },
-    {
-      name: "panel",
-      description: "فتح لوحة شراء الأعضاء",
-    },
-  ];
+module.exports = (client) => {
+  client.once("ready", async () => {
+    try {
+      const commands = [
+        {
+          name: "stock",
+          description: "عرض عدد الأعضاء المتاحين",
+        },
+        {
+          name: "panel",
+          description: "فتح لوحة شراء الأعضاء",
+        },
+      ];
 
-  const rest = new REST({ version: "9" }).setToken(process.env.token);
+      const rest = new REST({ version: "9" }).setToken(process.env.token);
 
-  try {
-    console.log("⏳ Registering slash commands...");
-    await rest.put(
-      Routes.applicationCommands(config.bot.botID),
-      { body: commands }
-    );
-    console.log("✅ Slash commands registered");
-  } catch (error) {
-    console.error(error);
-  }
+      await rest.put(
+        Routes.applicationCommands(config.bot.botID),
+        { body: commands }
+      );
+
+      console.log("✅ Slash commands registered");
+    } catch (error) {
+      console.error("❌ Slash register error:", error);
+    }
+  });
 };

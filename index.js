@@ -40,8 +40,6 @@ if (fs.existsSync(commandsPath)) {
         console.log(`✅ Loaded command: ${cmd.name}`);
       }
     });
-} else {
-  console.log("⚠️ commands folder not found");
 }
 
 /* ================= DATABASE ================= */
@@ -49,13 +47,18 @@ const dbDir = path.join(__dirname, "database");
 const dbPath = path.join(dbDir, "data.json");
 
 if (!fs.existsSync(dbDir)) fs.mkdirSync(dbDir);
+
 if (!fs.existsSync(dbPath)) {
-  fs.writeFileSync(dbPath, JSON.stringify({ coinPrice: 0, users: {} }, null, 2));
+  fs.writeFileSync(
+    dbPath,
+    JSON.stringify({ coinPrice: 0, users: {} }, null, 2)
+  );
 }
 
 function getData() {
   return JSON.parse(fs.readFileSync(dbPath, "utf8"));
 }
+
 function saveData(data) {
   fs.writeFileSync(dbPath, JSON.stringify(data, null, 2));
 }
@@ -65,17 +68,18 @@ client.once("ready", () => {
   console.log(`✅ Bot Online: ${client.user.tag}`);
 });
 
-/* ================= MESSAGE CREATE ================= */
+/* ================= MESSAGE COMMANDS ================= */
 client.on("messageCreate", async message => {
   if (message.author.bot) return;
 
-  /* ===== ADMIN: price ===== */
+  /* ===== ADMIN price ===== */
   if (message.content.startsWith("price")) {
     if (message.author.id !== config.adminId)
       return message.reply("❌ الأمر ده للأدمن فقط");
 
     const args = message.content.split(" ");
     const price = parseInt(args[1]);
+
     if (!price || price <= 0)
       return message.reply("❌ استخدم: price 100");
 
@@ -83,16 +87,18 @@ client.on("messageCreate", async message => {
     data.coinPrice = price;
     saveData(data);
 
-    return message.reply(`✅ تم تحديد سعر الكوين = **${price} كريدت**`);
+    return message.reply(
+      `✅ تم تحديد السعر\n💰 **1 Coin = ${price} Credit**`
+    );
   }
 
-  /* ===== حذف تكت بدون prefix ===== */
+  /* ===== حذف تكت ===== */
   if (message.content === "حذف") {
     if (!message.member.permissions.has("ADMINISTRATOR"))
       return message.reply("❌ الأمر للأدمن فقط");
 
     if (!message.channel.name.startsWith("ticket-"))
-      return message.reply("❌ الأمر ده يشتغل داخل تكت فقط");
+      return message.reply("❌ الأمر ده داخل تكت فقط");
 
     await message.reply("🗑️ سيتم حذف التكت بعد 3 ثواني...");
     return setTimeout(() => {
@@ -134,7 +140,6 @@ client.on("interactionCreate", async interaction => {
       }, 3000);
     }
 
-    /* ===== شراء رصيد ===== */
     if (interaction.customId === "buy_balance") {
       const modal = new Modal()
         .setCustomId("buy_balance_modal")
@@ -157,24 +162,22 @@ client.on("interactionCreate", async interaction => {
 
   /* ===== MODAL SUBMIT ===== */
   if (interaction.isModalSubmit()) {
-  if (interaction.customId === "buy_balance_modal") {
+    if (interaction.customId === "buy_balance_modal") {
 
-    try {
       const amount = parseInt(
         interaction.fields.getTextInputValue("amount")
       );
 
       if (isNaN(amount) || amount <= 0) {
-        return await interaction.reply({
+        return interaction.reply({
           content: "❌ الكمية غير صحيحة",
           ephemeral: true
         });
       }
 
       const data = getData();
-
       if (!data.coinPrice || data.coinPrice <= 0) {
-        return await interaction.reply({
+        return interaction.reply({
           content: "❌ سعر الكوين غير محدد بعد",
           ephemeral: true
         });
@@ -182,7 +185,7 @@ client.on("interactionCreate", async interaction => {
 
       const total = amount * data.coinPrice;
 
-      await interaction.reply({
+      return interaction.reply({
         embeds: [{
           color: 0xfacc15,
           description:
@@ -199,19 +202,10 @@ client.on("interactionCreate", async interaction => {
 ⏱️ لديك **5 دقائق** لإتمام التحويل`
         }]
       });
-
-    } catch (err) {
-      console.error("❌ Modal Error:", err);
-
-      if (!interaction.replied) {
-        await interaction.reply({
-          content: "❌ حصل خطأ غير متوقع، حاول مرة أخرى",
-          ephemeral: true
-        });
-      }
     }
   }
-}
+}); // ✅ قفل interactionCreate صح
+
 /* ================= PROBOT MONITOR ================= */
 client.on("messageCreate", async message => {
   try {
@@ -223,6 +217,7 @@ client.on("messageCreate", async message => {
     if (!creditMatch) return;
 
     const credits = parseInt(creditMatch[1]);
+
     const userMatch = message.content.match(/\| (.*?), has transferred/);
     if (!userMatch) return;
 

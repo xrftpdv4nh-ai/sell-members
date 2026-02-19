@@ -3,9 +3,7 @@ const {
   Intents,
   MessageEmbed,
   MessageButton,
-  MessageActionRow,
-  Modal,
-  TextInputComponent
+  MessageActionRow
 } = require("discord.js");
 
 const fs = require("fs");
@@ -16,28 +14,31 @@ const session = require("express-session");
 const passport = require("passport");
 const DiscordStrategy = require("passport-discord").Strategy;
 const DiscordOauth2 = require("discord-oauth2");
-const Database = require("st.db");
 
-const config = require("./config.js");
+const config = require("./config");
 
-/* ================== FOLDERS CHECK ================== */
-if (!fs.existsSync(path.join(process.cwd(), "database"))) {
-  fs.mkdirSync(path.join(process.cwd(), "database"));
+/* ================= FILE DB ================= */
+const dbPath = path.join(process.cwd(), "database", "users.json");
+
+if (!fs.existsSync("database")) fs.mkdirSync("database");
+if (!fs.existsSync(dbPath)) fs.writeFileSync(dbPath, JSON.stringify({}));
+
+function getUsers() {
+  return JSON.parse(fs.readFileSync(dbPath));
 }
 
-if (!fs.existsSync(path.join(process.cwd(), "database", "users.json"))) {
-  fs.writeFileSync(
-    path.join(process.cwd(), "database", "users.json"),
-    JSON.stringify({}, null, 2)
-  );
+function setUser(id, data) {
+  const users = getUsers();
+  users[id] = data;
+  fs.writeFileSync(dbPath, JSON.stringify(users, null, 2));
 }
 
-/* ================== CLIENT ================== */
+/* ================= CLIENT ================= */
 const client = new Client({
   intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES],
 });
 
-/* ================== EXPRESS ================== */
+/* ================= EXPRESS ================= */
 const app = express();
 app.listen(process.env.PORT || 3000, () => {
   console.log("🌍 Website Online");
@@ -46,20 +47,14 @@ app.listen(process.env.PORT || 3000, () => {
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static("public"));
 
-/* ================== DATABASE (FIXED) ================== */
-const usersdata = new Database({
-  path: path.join(process.cwd(), "database", "users.json"),
-  databaseInObject: true,
-});
-
-/* ================== OAUTH ================== */
+/* ================= OAUTH ================= */
 const oauth = new DiscordOauth2({
   clientId: config.bot.botID,
   clientSecret: config.bot.clientSECRET,
   redirectUri: config.bot.callbackURL,
 });
 
-/* ================== PASSPORT ================== */
+/* ================= PASSPORT ================= */
 passport.use(
   new DiscordStrategy(
     {
@@ -69,17 +64,14 @@ passport.use(
       scope: ["identify", "email", "guilds", "guilds.join"],
     },
     (accessToken, refreshToken, profile, done) => {
-      usersdata.set(profile.id, {
-        accessToken,
-        refreshToken,
-      });
+      setUser(profile.id, { accessToken, refreshToken });
       return done(null, profile);
     }
   )
 );
 
-passport.serializeUser((user, done) => done(null, user));
-passport.deserializeUser((obj, done) => done(null, obj));
+passport.serializeUser((u, d) => d(null, u));
+passport.deserializeUser((u, d) => d(null, u));
 
 app.use(
   session({
@@ -92,120 +84,61 @@ app.use(
 app.use(passport.initialize());
 app.use(passport.session());
 
-/* ================== ROUTES ================== */
+/* ================= ROUTES ================= */
 app.get("/", (req, res) => {
   res.send("Bot Online 24H ✅");
 });
 
 app.get("/login", passport.authenticate("discord", { failureRedirect: "/" }));
 
-/* ================== READY ================== */
+/* ================= READY ================= */
 client.on("ready", async () => {
   console.log(`🤖 Bot Online: ${client.user.tag}`);
 
   await client.application.commands.set([
-    {
-      name: "stock",
-      description: "عرض عدد الأعضاء المتاحين",
-    },
-    {
-      name: "panel",
-      description: "فتح لوحة شراء الأعضاء",
-    },
+    { name: "stock", description: "عرض عدد الأعضاء" },
+    { name: "panel", description: "شراء أعضاء" },
   ]);
 });
 
-/* ================== PREFIX COMMANDS ================== */
+/* ================= PREFIX ================= */
 client.on("messageCreate", async (message) => {
   if (message.author.bot) return;
 
-  if (message.content === "+send") {
-    if (!config.bot.owners.includes(message.author.id)) return;
-
-    const row = new MessageActionRow().addComponents(
-      new MessageButton()
-        .setLabel("أثبت نفسك")
-        .setStyle("LINK")
-        .setURL(config.bot.verifylink)
-        .setEmoji("✅")
-    );
-
-    message.channel.send({
-      content: "اضغط على الزر بالأسفل 👇",
-      components: [row],
-    });
-  }
-
   if (message.content === "+users") {
-    message.reply(`📦 الستوك الحالي: ${usersdata.all().length}`);
-  }
-
-  if (message.content === "+help") {
-    message.reply("+send\n+users\n/stock\n/panel");
+    const users = Object.keys(getUsers()).length;
+    message.reply(`📦 الستوك الحالي: ${users}`);
   }
 });
 
-/* ================== SLASH COMMANDS ================== */
+/* ================= SLASH ================= */
 client.on("interactionCreate", async (interaction) => {
   if (interaction.isCommand()) {
     if (interaction.commandName === "stock") {
+      const users = Object.keys(getUsers()).length;
       return interaction.reply({
-        content: `📦 **الستوك الحالي:** ${usersdata.all().length} عضو`,
+        content: `📦 الستوك الحالي: ${users}`,
         ephemeral: true,
       });
     }
 
     if (interaction.commandName === "panel") {
       const embed = new MessageEmbed()
-        .setTitle("بيع أعضاء حقيقية 👥")
-        .setDescription("اضغط على الزر لفتح تذكرة شراء")
+        .setTitle("شراء أعضاء 👥")
+        .setDescription("اضغط لفتح تذكرة")
         .setColor("#0099ff");
 
       const row = new MessageActionRow().addComponents(
         new MessageButton()
           .setCustomId("open_ticket")
           .setLabel("شراء أعضاء")
-          .setEmoji("👥")
           .setStyle("SECONDARY")
       );
 
-      return interaction.reply({
-        embeds: [embed],
-        components: [row],
-        ephemeral: true,
-      });
+      interaction.reply({ embeds: [embed], components: [row], ephemeral: true });
     }
-  }
-
-  if (interaction.isButton() && interaction.customId === "open_ticket") {
-    const ticket = await interaction.guild.channels.create(
-      `ticket-${interaction.user.username}`,
-      {
-        type: "GUILD_TEXT",
-        parent: config.bot.category,
-        permissionOverwrites: [
-          {
-            id: interaction.user.id,
-            allow: ["VIEW_CHANNEL", "SEND_MESSAGES"],
-          },
-          {
-            id: interaction.guild.roles.everyone,
-            deny: ["VIEW_CHANNEL"],
-          },
-        ],
-      }
-    );
-
-    interaction.reply({
-      content: `✅ تم فتح التذكرة <#${ticket.id}>`,
-      ephemeral: true,
-    });
   }
 });
 
-/* ================== ERRORS ================== */
-process.on("unhandledRejection", console.error);
-process.on("uncaughtException", console.error);
-
-/* ================== LOGIN ================== */
+/* ================= LOGIN ================= */
 client.login(process.env.token);

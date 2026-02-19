@@ -1,4 +1,4 @@
 module.exports = {
   prefix: "+",
-  ticketCategory: "PUT_CATEGORY_ID_HERE"
+  ticketCategory: "1470482518120861920"
 };

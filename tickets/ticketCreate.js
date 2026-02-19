@@ -10,10 +10,18 @@ module.exports = async (interaction, client) => {
   const user = interaction.user;
 
   // منع تكتين لنفس الشخص
-  const existing = guild.channels.cache.find(
-    c => c.name === `ticket-${user.username.toLowerCase()}`
-  );
+const existing = guild.channels.cache.find(
+  c =>
+    c.parentId === config.ticket.categoryId &&
+    c.name === `ticket-${user.id}`
+);
 
+if (existing) {
+  return interaction.reply({
+    content: "❌ عندك تذكرة مفتوحة بالفعل",
+    ephemeral: true
+  });
+}
   if (existing) {
     return interaction.reply({
       content: "❌ عندك تذكرة مفتوحة بالفعل",

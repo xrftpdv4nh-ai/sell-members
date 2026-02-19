@@ -11,7 +11,6 @@ const path = require("path");
 const express = require("express");
 
 /* ================== CONFIG ================== */
-const BOT_TOKEN = "MTI3OTQyMzAyNTk4MDExMjk4OA.G6xN8l.4uaBD67VmotKk-r5RO2VdK2zDYvSO4rhfIBHjU"; // 👈 حط التوكن هنا فقط
 const PREFIX = "+";
 
 /* ================== CLIENT ================== */

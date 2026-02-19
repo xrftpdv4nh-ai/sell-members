@@ -10,100 +10,109 @@ const fs = require("fs");
 const path = require("path");
 const express = require("express");
 
-const config = require("./config");
+/* ================== CONFIG ================== */
+const BOT_TOKEN = "PUT_YOUR_BOT_TOKEN_HERE"; // 👈 حط التوكن هنا
+const PREFIX = "+";
 
-/* ================= DATABASE ================= */
-const dbPath = path.join(__dirname, "database", "users.json");
-if (!fs.existsSync("database")) fs.mkdirSync("database");
-if (!fs.existsSync(dbPath)) fs.writeFileSync(dbPath, "{}");
-
-const getUsers = () => JSON.parse(fs.readFileSync(dbPath));
-const setUser = (id, data) => {
-  const users = getUsers();
-  users[id] = data;
-  fs.writeFileSync(dbPath, JSON.stringify(users, null, 2));
-};
-
-/* ================= CLIENT ================= */
+/* ================== CLIENT ================== */
 const client = new Client({
-  intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES],
+  intents: [
+    Intents.FLAGS.GUILDS,
+    Intents.FLAGS.GUILD_MESSAGES
+  ],
 });
 
-/* ================= EXPRESS ================= */
+/* ================== EXPRESS (UPTIME) ================== */
 const app = express();
-app.get("/", (req, res) => res.send("Bot Online ✅"));
-app.listen(process.env.PORT || 3000);
+app.get("/", (req, res) => {
+  res.send("Bot Online 24/7 ✅");
+});
+app.listen(3000, () => {
+  console.log("🌍 Website Online");
+});
 
-/* ================= READY ================= */
+/* ================== FILE DATABASE ================== */
+const dbPath = path.join(__dirname, "database", "users.json");
+
+if (!fs.existsSync("database")) fs.mkdirSync("database");
+if (!fs.existsSync(dbPath)) fs.writeFileSync(dbPath, JSON.stringify({}));
+
+function getUsers() {
+  return JSON.parse(fs.readFileSync(dbPath));
+}
+
+/* ================== READY ================== */
 client.once("ready", async () => {
-  console.log(`🤖 Logged in as ${client.user.tag}`);
+  console.log(`🤖 Bot Online: ${client.user.tag}`);
 
+  // تسجيل أوامر السلاش
   await client.application.commands.set([
     {
       name: "stock",
-      description: "عرض عدد الأعضاء المتاحين"
+      description: "عرض عدد المستخدمين المسجلين"
     },
     {
       name: "panel",
-      description: "فتح لوحة شراء الأعضاء"
+      description: "عرض لوحة تجريبية"
     }
   ]);
 
-  console.log("✅ Slash Commands Registered");
+  console.log("✅ Slash commands registered");
 });
 
-/* ================= PREFIX COMMANDS ================= */
-client.on("messageCreate", async message => {
+/* ================== PREFIX COMMANDS ================== */
+client.on("messageCreate", async (message) => {
   if (message.author.bot) return;
+  if (!message.content.startsWith(PREFIX)) return;
 
-  if (message.content === "+users") {
-    return message.reply(`📦 الستوك الحالي: ${Object.keys(getUsers()).length}`);
+  const args = message.content.slice(PREFIX.length).trim().split(/ +/);
+  const command = args.shift().toLowerCase();
+
+  if (command === "ping") {
+    return message.reply("🏓 Pong!");
   }
 
-  if (message.content === "+send") {
-    if (!config.bot.owners.includes(message.author.id)) return;
+  if (command === "users") {
+    const count = Object.keys(getUsers()).length;
+    return message.reply(`📦 عدد المستخدمين: ${count}`);
+  }
 
-    const row = new MessageActionRow().addComponents(
-      new MessageButton()
-        .setLabel("أثبت نفسك")
-        .setStyle("LINK")
-        .setURL(config.bot.verifyLink)
-        .setEmoji("✅")
+  if (command === "help") {
+    return message.reply(
+      `**الأوامر:**\n` +
+      `+ping\n` +
+      `+users\n` +
+      `/stock\n` +
+      `/panel`
     );
-
-    return message.channel.send({
-      content: "اضغط على الزر 👇",
-      components: [row]
-    });
-  }
-
-  if (message.content === "+help") {
-    return message.reply("+users\n+send\n/stock\n/panel");
   }
 });
 
-/* ================= SLASH ================= */
-client.on("interactionCreate", async interaction => {
+/* ================== SLASH COMMANDS ================== */
+client.on("interactionCreate", async (interaction) => {
   if (!interaction.isCommand()) return;
 
+  /* /stock */
   if (interaction.commandName === "stock") {
+    const count = Object.keys(getUsers()).length;
     return interaction.reply({
-      content: `📦 الستوك الحالي: ${Object.keys(getUsers()).length}`,
+      content: `📦 **الستوك الحالي:** ${count}`,
       ephemeral: true
     });
   }
 
+  /* /panel */
   if (interaction.commandName === "panel") {
     const embed = new MessageEmbed()
-      .setTitle("بيع أعضاء حقيقية 👥")
-      .setDescription("اضغط على الزر لفتح تذكرة شراء")
-      .setColor("#2f3136");
+      .setTitle("لوحة تجريبية 🧪")
+      .setDescription("دي مجرد تجربة سلاش شغالة")
+      .setColor("#0099ff");
 
     const row = new MessageActionRow().addComponents(
       new MessageButton()
-        .setCustomId("open_ticket")
-        .setLabel("شراء أعضاء")
+        .setLabel("زر تجريبي")
         .setStyle("SECONDARY")
+        .setCustomId("test_button")
     );
 
     return interaction.reply({
@@ -114,35 +123,21 @@ client.on("interactionCreate", async interaction => {
   }
 });
 
-/* ================= BUTTON ================= */
-client.on("interactionCreate", async interaction => {
+/* ================== BUTTON ================== */
+client.on("interactionCreate", async (interaction) => {
   if (!interaction.isButton()) return;
 
-  if (interaction.customId === "open_ticket") {
-    const channel = await interaction.guild.channels.create(
-      `ticket-${interaction.user.username}`,
-      {
-        type: "GUILD_TEXT",
-        parent: config.bot.categoryId,
-        permissionOverwrites: [
-          {
-            id: interaction.user.id,
-            allow: ["VIEW_CHANNEL", "SEND_MESSAGES"]
-          },
-          {
-            id: interaction.guild.roles.everyone,
-            deny: ["VIEW_CHANNEL"]
-          }
-        ]
-      }
-    );
-
+  if (interaction.customId === "test_button") {
     return interaction.reply({
-      content: `✅ تم فتح التذكرة <#${channel.id}>`,
+      content: "✅ الزر شغال تمام",
       ephemeral: true
     });
   }
 });
 
-/* ================= LOGIN ================= */
-client.login(config.bot.token);
+/* ================== ERRORS ================== */
+process.on("unhandledRejection", console.error);
+process.on("uncaughtException", console.error);
+
+/* ================== LOGIN ================== */
+client.login(BOT_TOKEN);

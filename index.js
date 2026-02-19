@@ -92,6 +92,28 @@ if (interaction.customId === "check_server") {
 }
 });
 
+client.on("messageCreate", async (message) => {
+  if (message.author.bot) return;
+
+  // الأمر بدون prefix
+  if (message.content !== "حذف") return;
+
+  // تحقق من صلاحية الأدمن
+  if (!message.member.permissions.has("ADMINISTRATOR")) {
+    return message.reply("❌ الأمر ده للأدمن فقط");
+  }
+
+  // منع حذف روم مش تكت (اختياري)
+  if (!message.channel.name.startsWith("ticket-")) {
+    return message.reply("❌ الأمر ده يشتغل داخل التكت فقط");
+  }
+
+  await message.reply("🗑️ سيتم حذف الروم بعد 3 ثواني...");
+  
+  setTimeout(() => {
+    message.channel.delete().catch(() => {});
+  }, 3000);
+});
 // ===== READY =====
 client.once("ready", () => {
   console.log(`✅ Logged in as ${client.user.tag}`);

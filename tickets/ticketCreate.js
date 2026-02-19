@@ -3,50 +3,62 @@ const config = require("../config");
 
 module.exports = async (interaction, client) => {
   const guild = interaction.guild;
-  const member = interaction.member;
+  const user = interaction.user;
 
-  // منع فتح أكتر من تكت
-  if (guild.channels.cache.find(c => c.name === `ticket-${member.user.username}`)) {
-    return interaction.reply({ content: "❌ عندك تكت مفتوح بالفعل", ephemeral: true });
+  // منع تكتين لنفس الشخص
+  const existing = guild.channels.cache.find(
+    c => c.name === `ticket-${user.id}`
+  );
+  if (existing) {
+    return interaction.reply({
+      content: "❌ لديك تذكرة مفتوحة بالفعل",
+      ephemeral: true
+    });
   }
 
-  const channel = await guild.channels.create(`ticket-${member.user.username}`, {
+  const channel = await guild.channels.create(`ticket-${user.username}`, {
     type: "GUILD_TEXT",
-    parent: config.ticketCategoryId,
+    parent: config.ticket.categoryId,
     permissionOverwrites: [
-      { id: guild.id, deny: ["VIEW_CHANNEL"] },
-      { id: member.id, allow: ["VIEW_CHANNEL", "SEND_MESSAGES"] },
-      { id: config.supportRoleId, allow: ["VIEW_CHANNEL", "SEND_MESSAGES"] }
+      {
+        id: guild.roles.everyone.id,
+        deny: ["VIEW_CHANNEL"]
+      },
+      {
+        id: user.id,
+        allow: ["VIEW_CHANNEL", "SEND_MESSAGES"]
+      },
+      {
+        id: config.ticket.supportRoleId,
+        allow: ["VIEW_CHANNEL", "SEND_MESSAGES"]
+      }
     ]
   });
 
   const embed = new MessageEmbed()
-    .setColor("#0f172a")
-    .setTitle("🎟️ تذكرة شراء أعضاء")
+    .setColor("#00b894")
+    .setTitle("🎫 تذكرة شراء أعضاء")
     .setDescription(
-`👋 أهلاً بك في نظام التذاكر  
-
-📌 **تفاصيل الخدمة:**  
-• شراء أعضاء متواجدين  
-• نسبة دخول عالية  
-• التسليم تلقائي  
-
-📝 **اكتب الكمية المطلوبة وانتظر الرد**`
+      `مرحبًا ${user}\n\n` +
+      "اكتب الكمية المطلوبة وانتظر رد الدعم.\n\n" +
+      "⛔ يمنع السبام"
     );
 
   const row = new MessageActionRow().addComponents(
     new MessageButton()
       .setCustomId("close_ticket")
-      .setLabel("إغلاق التذكرة")
+      .setLabel("❌ غلق التذكرة")
       .setStyle("DANGER")
-      .setEmoji("❌")
   );
 
-  await channel.send({
-    content: `<@${member.id}>`,
+  channel.send({
+    content: `${user}`,
     embeds: [embed],
     components: [row]
   });
 
-  interaction.reply({ content: "✅ تم إنشاء التذكرة", ephemeral: true });
+  interaction.reply({
+    content: `✅ تم فتح التذكرة ${channel}`,
+    ephemeral: true
+  });
 };

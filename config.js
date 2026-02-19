@@ -1,19 +1,19 @@
 module.exports = {
   bot: {
-    owners: [],            // Owners IDs
-    botID: "",             // Bot Client ID
-    GuildId: "",           // Main Server ID (اختياري)
-    ClientId: "",          // Client ID (غالبًا نفس botID)
-    serverinvte: "",       // Server Invite Link
-    clientSECRET: "",      // Client Secret
-    callbackURL: "",       // OAuth Callback URL
-    inviteBotUrl: "",      // Bot Invite URL
-    verifylink: "",        // OAuth Verify/Login Link
-    category: "",          // Ticket Category ID
-    probotid: "",          // ProBot ID
-    transferid: "",        // Transfer Receiver ID
-    price: "",             // Price per member
-    logs: ""               // Logs Channel ID
+    owners: [1035345058561540127],            // Owners IDs
+    botID: "1279423025980112988",             // Bot Client ID
+    GuildId: "1279423025980112988",           // Main Server ID (اختياري)
+    ClientId: "1279423025980112988",          // Client ID (غالبًا نفس botID)
+    serverinvte: "https://discord.gg/aq3Gdsc5K",       // Server Invite Link
+    clientSECRET: "C9QvkAYF5pxWguarrla-n4HFTC_6U660",      // Client Secret
+    callbackURL: "https://sell-members-production.up.railway.app/login",       // OAuth Callback URL
+    inviteBotUrl: "https://discord.com/oauth2/authorize?client_id=1279423025980112988&permissions=8&integration_type=0&scope=bot",      // Bot Invite URL
+    verifylink: "https://sell-members-production.up.railway.app/login",        // OAuth Verify/Login Link
+    category: "1470482518120861920",          // Ticket Category ID
+    probotid: "https://probot.io/invite",          // ProBot ID
+    transferid: "1066773224723058778",        // Transfer Receiver ID
+    price: "1",             // Price per member
+    logs: "1275933830905335819"               // Logs Channel ID
   },
 
   website: {

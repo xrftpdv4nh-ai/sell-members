@@ -1,7 +1,7 @@
 {
   "name": "verification-bot-v2",
   "version": "2.0.0",
-  "description": "By Bleto_YT",
+  "description": "Verification & Members Bot",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
@@ -12,14 +12,11 @@
     "body-parser": "^1.20.0",
     "discord-oauth2": "^2.11.0",
     "discord.js": "^13.17.1",
-    "ejs": "^3.1.10",
     "express": "^4.21.2",
     "express-session": "^1.17.3",
-    "node-fetch": "^2.7.0",
     "passport": "^0.6.0",
     "passport-discord": "^0.1.4",
-    "passport-oauth2-refresh": "^2.1.0",
-    "st.db": "^1.1.2"
+    "st.db": "^4.0.7"
   },
   "engines": {
     "node": "16.x"

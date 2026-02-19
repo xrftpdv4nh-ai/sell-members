@@ -9,138 +9,140 @@ const {
 const fs = require("fs");
 const path = require("path");
 const express = require("express");
-const bodyParser = require("body-parser");
-const session = require("express-session");
-const passport = require("passport");
-const DiscordStrategy = require("passport-discord").Strategy;
-const DiscordOauth2 = require("discord-oauth2");
 
 const config = require("./config");
 
-/* ================= FILE DB ================= */
-const dbPath = path.join(process.cwd(), "database", "users.json");
-
+/* ================= DATABASE ================= */
+const dbPath = path.join(__dirname, "database", "users.json");
 if (!fs.existsSync("database")) fs.mkdirSync("database");
-if (!fs.existsSync(dbPath)) fs.writeFileSync(dbPath, JSON.stringify({}));
+if (!fs.existsSync(dbPath)) fs.writeFileSync(dbPath, "{}");
 
-function getUsers() {
-  return JSON.parse(fs.readFileSync(dbPath));
-}
-
-function setUser(id, data) {
+const getUsers = () => JSON.parse(fs.readFileSync(dbPath));
+const setUser = (id, data) => {
   const users = getUsers();
   users[id] = data;
   fs.writeFileSync(dbPath, JSON.stringify(users, null, 2));
-}
+};
 
 /* ================= CLIENT ================= */
 const client = new Client({
   intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES],
 });
 
-/* ✅ تسجيل أوامر السلاش */
-require("./handlers/registerSlash")(client);
-
 /* ================= EXPRESS ================= */
 const app = express();
-app.listen(process.env.PORT || 3000, () => {
-  console.log("🌍 Website Online");
-});
-
-app.use(bodyParser.urlencoded({ extended: true }));
-app.use(express.static("public"));
-/* ================= OAUTH ================= */
-const oauth = new DiscordOauth2({
-  clientId: config.bot.botID,
-  clientSecret: config.bot.clientSECRET,
-  redirectUri: config.bot.callbackURL,
-});
-
-/* ================= PASSPORT ================= */
-passport.use(
-  new DiscordStrategy(
-    {
-      clientID: config.bot.botID,
-      clientSecret: config.bot.clientSECRET,
-      callbackURL: config.bot.callbackURL,
-      scope: ["identify", "email", "guilds", "guilds.join"],
-    },
-    (accessToken, refreshToken, profile, done) => {
-      setUser(profile.id, { accessToken, refreshToken });
-      return done(null, profile);
-    }
-  )
-);
-
-passport.serializeUser((u, d) => d(null, u));
-passport.deserializeUser((u, d) => d(null, u));
-
-app.use(
-  session({
-    secret: "secret_session",
-    resave: false,
-    saveUninitialized: false,
-  })
-);
-
-app.use(passport.initialize());
-app.use(passport.session());
-
-/* ================= ROUTES ================= */
-app.get("/", (req, res) => {
-  res.send("Bot Online 24H ✅");
-});
-
-app.get("/login", passport.authenticate("discord", { failureRedirect: "/" }));
+app.get("/", (req, res) => res.send("Bot Online ✅"));
+app.listen(process.env.PORT || 3000);
 
 /* ================= READY ================= */
-client.on("ready", async () => {
-  console.log(`🤖 Bot Online: ${client.user.tag}`);
+client.once("ready", async () => {
+  console.log(`🤖 Logged in as ${client.user.tag}`);
 
   await client.application.commands.set([
-    { name: "stock", description: "عرض عدد الأعضاء" },
-    { name: "panel", description: "شراء أعضاء" },
+    {
+      name: "stock",
+      description: "عرض عدد الأعضاء المتاحين"
+    },
+    {
+      name: "panel",
+      description: "فتح لوحة شراء الأعضاء"
+    }
   ]);
+
+  console.log("✅ Slash Commands Registered");
 });
 
-/* ================= PREFIX ================= */
-client.on("messageCreate", async (message) => {
+/* ================= PREFIX COMMANDS ================= */
+client.on("messageCreate", async message => {
   if (message.author.bot) return;
 
   if (message.content === "+users") {
-    const users = Object.keys(getUsers()).length;
-    message.reply(`📦 الستوك الحالي: ${users}`);
+    return message.reply(`📦 الستوك الحالي: ${Object.keys(getUsers()).length}`);
+  }
+
+  if (message.content === "+send") {
+    if (!config.bot.owners.includes(message.author.id)) return;
+
+    const row = new MessageActionRow().addComponents(
+      new MessageButton()
+        .setLabel("أثبت نفسك")
+        .setStyle("LINK")
+        .setURL(config.bot.verifyLink)
+        .setEmoji("✅")
+    );
+
+    return message.channel.send({
+      content: "اضغط على الزر 👇",
+      components: [row]
+    });
+  }
+
+  if (message.content === "+help") {
+    return message.reply("+users\n+send\n/stock\n/panel");
   }
 });
 
 /* ================= SLASH ================= */
-client.on("interactionCreate", async (interaction) => {
-  if (interaction.isCommand()) {
-    if (interaction.commandName === "stock") {
-      const users = Object.keys(getUsers()).length;
-      return interaction.reply({
-        content: `📦 الستوك الحالي: ${users}`,
-        ephemeral: true,
-      });
-    }
+client.on("interactionCreate", async interaction => {
+  if (!interaction.isCommand()) return;
 
-    if (interaction.commandName === "panel") {
-      const embed = new MessageEmbed()
-        .setTitle("شراء أعضاء 👥")
-        .setDescription("اضغط لفتح تذكرة")
-        .setColor("#0099ff");
+  if (interaction.commandName === "stock") {
+    return interaction.reply({
+      content: `📦 الستوك الحالي: ${Object.keys(getUsers()).length}`,
+      ephemeral: true
+    });
+  }
 
-      const row = new MessageActionRow().addComponents(
-        new MessageButton()
-          .setCustomId("open_ticket")
-          .setLabel("شراء أعضاء")
-          .setStyle("SECONDARY")
-      );
+  if (interaction.commandName === "panel") {
+    const embed = new MessageEmbed()
+      .setTitle("بيع أعضاء حقيقية 👥")
+      .setDescription("اضغط على الزر لفتح تذكرة شراء")
+      .setColor("#2f3136");
 
-      interaction.reply({ embeds: [embed], components: [row], ephemeral: true });
-    }
+    const row = new MessageActionRow().addComponents(
+      new MessageButton()
+        .setCustomId("open_ticket")
+        .setLabel("شراء أعضاء")
+        .setStyle("SECONDARY")
+    );
+
+    return interaction.reply({
+      embeds: [embed],
+      components: [row],
+      ephemeral: true
+    });
+  }
+});
+
+/* ================= BUTTON ================= */
+client.on("interactionCreate", async interaction => {
+  if (!interaction.isButton()) return;
+
+  if (interaction.customId === "open_ticket") {
+    const channel = await interaction.guild.channels.create(
+      `ticket-${interaction.user.username}`,
+      {
+        type: "GUILD_TEXT",
+        parent: config.bot.categoryId,
+        permissionOverwrites: [
+          {
+            id: interaction.user.id,
+            allow: ["VIEW_CHANNEL", "SEND_MESSAGES"]
+          },
+          {
+            id: interaction.guild.roles.everyone,
+            deny: ["VIEW_CHANNEL"]
+          }
+        ]
+      }
+    );
+
+    return interaction.reply({
+      content: `✅ تم فتح التذكرة <#${channel.id}>`,
+      ephemeral: true
+    });
   }
 });
 
 /* ================= LOGIN ================= */
-client.login(process.env.token);
+client.login(config.bot.token);

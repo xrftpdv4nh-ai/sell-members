@@ -1,8 +1,15 @@
-const { Client, Intents, MessageActionRow, MessageButton } = require("discord.js");
+const {
+  Client,
+  Intents,
+  MessageActionRow,
+  MessageButton
+} = require("discord.js");
+
 const config = require("./config");
 const fs = require("fs");
+const path = require("path");
 
-// ✅ التوكن من Environment Variable
+// ===== TOKEN =====
 const BOT_TOKEN = process.env.BOT_TOKEN;
 
 if (!BOT_TOKEN) {
@@ -10,6 +17,7 @@ if (!BOT_TOKEN) {
   process.exit(1);
 }
 
+// ===== CLIENT =====
 const client = new Client({
   intents: [
     Intents.FLAGS.GUILDS,
@@ -19,25 +27,47 @@ const client = new Client({
 
 client.commands = new Map();
 
-// تحميل الأوامر
-fs.readdirSync("./commands").forEach(file => {
-  const cmd = require(`./commands/${file}`);
-  client.commands.set(cmd.name, cmd);
-});
+// ===== LOAD COMMANDS =====
+const commandsPath = path.join(__dirname, "commands");
 
-// ================= PREFIX =================
+fs.readdirSync(commandsPath)
+  .filter(file => file.endsWith(".js"))
+  .forEach(file => {
+    const cmd = require(`./commands/${file}`);
+
+    if (!cmd.name || !cmd.run) {
+      console.log(`⚠️ Skip invalid command file: ${file}`);
+      return;
+    }
+
+    client.commands.set(cmd.name, cmd);
+    console.log(`✅ Loaded command: ${cmd.name}`);
+  });
+
+// ===== PREFIX HANDLER =====
 client.on("messageCreate", async message => {
   if (message.author.bot) return;
   if (!message.content.startsWith(config.prefix)) return;
 
-  const args = message.content.slice(config.prefix.length).trim().split(/ +/);
-  const command = args.shift().toLowerCase();
+  const args = message.content
+    .slice(config.prefix.length)
+    .trim()
+    .split(/ +/);
 
-  const cmd = client.commands.get(command);
-  if (cmd) cmd.run(client, message, args);
+  const commandName = args.shift().toLowerCase();
+  const command = client.commands.get(commandName);
+
+  if (!command) return;
+
+  try {
+    command.run(client, message, args);
+  } catch (err) {
+    console.error(err);
+    message.reply("❌ حصل خطأ في تنفيذ الأمر");
+  }
 });
 
-// ================= BUTTONS =================
+// ===== BUTTONS =====
 client.on("interactionCreate", async interaction => {
   if (!interaction.isButton()) return;
 
@@ -50,9 +80,10 @@ client.on("interactionCreate", async interaction => {
   }
 });
 
+// ===== READY =====
 client.once("ready", () => {
   console.log(`✅ Logged in as ${client.user.tag}`);
 });
 
-// 🔐 تسجيل الدخول
+// ===== LOGIN =====
 client.login(BOT_TOKEN);

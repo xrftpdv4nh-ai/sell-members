@@ -71,39 +71,61 @@ client.on("messageCreate", async message => {
     return message.reply(`🪙 **رصيدك الحالي:** ${coins} كوين`);
   }
 
-  /* ===== PROBOT MONITOR ===== */
-  if (
-    message.author.id === config.probotId &&
-    message.content.includes("#credit") &&
-    message.content.includes(config.creditAccountId)
-  ) {
-    try {
-      const creditMatch = message.content.match(/#credit\s+\d+\s+(\d+)/);
-      if (!creditMatch) return;
+  /// ===== PROBOT MONITOR (SAFE) =====
+client.on("messageCreate", async message => {
+  try {
+    // تأكد إنه بروبوت
+    if (message.author.id !== config.probot.id) return;
 
-      const credits = parseInt(creditMatch[1]);
-      const userMatch = message.mentions.users.first();
-      if (!userMatch) return;
+    // لازم Embed
+    if (!message.embeds || message.embeds.length === 0) return;
 
-      const coins = Math.floor(credits / data.coinPrice);
-      if (coins <= 0) return;
+    const embed = message.embeds[0];
+    if (!embed.description) return;
 
-      if (!data.users[userMatch.id])
-        data.users[userMatch.id] = { coins: 0 };
+    // لازم يكون تحويل كريدت
+    if (!embed.description.includes("has transferred")) return;
+    if (!embed.description.includes(config.probot.creditAccountId)) return;
 
-      data.users[userMatch.id].coins += coins;
-      saveData(data);
+    // استخراج ID المستخدم
+    const userIdMatch = embed.description.match(/<@!?(\d+)>/);
+    if (!userIdMatch) return;
 
-      return message.channel.send(
-`✅ **تم استلام التحويل**
-👤 ${userMatch}
+    const userId = userIdMatch[1];
+
+    // استخراج عدد الكريدت
+    const creditMatch = embed.description.match(/(\d+)\s*credits?/i);
+    if (!creditMatch) return;
+
+    const credits = parseInt(creditMatch[1]);
+    if (credits <= 0) return;
+
+    const data = getData();
+    if (!data.coinPrice || data.coinPrice <= 0) return;
+
+    const coins = Math.floor(credits / data.coinPrice);
+    if (coins <= 0) return;
+
+    if (!data.users[userId]) {
+      data.users[userId] = { coins: 0 };
+    }
+
+    data.users[userId].coins += coins;
+    saveData(data);
+
+    message.channel.send(
+`✅ **تم استلام التحويل بنجاح**
+
+👤 <@${userId}>
 💰 ${credits} كريدت
 🪙 ${coins} كوين
-📦 رصيدك الحالي: **${data.users[userMatch.id].coins}**`
-      );
-    } catch (e) {
-      console.error("❌ ProBot Error:", e);
-    }
+
+📦 رصيدك الحالي:
+**${data.users[userId].coins} كوين**`
+    );
+
+  } catch (err) {
+    console.error("❌ ProBot Monitor Error:", err);
   }
 });
 

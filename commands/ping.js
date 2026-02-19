@@ -1,6 +1,6 @@
 module.exports = {
   name: "ping",
-  execute(message) {
-    message.reply("🏓 Pong!");
+  run: async (client, message) => {
+    message.reply("🏓 Pong! البوت شغال ✅");
   }
 };

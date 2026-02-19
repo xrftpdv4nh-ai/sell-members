@@ -78,6 +78,18 @@ client.on("interactionCreate", async interaction => {
   if (interaction.customId === "close_ticket") {
     require("./tickets/ticketClose")(interaction);
   }
+
+  if (interaction.customId === "buy_members") {
+  interaction.reply({ content: "👥 قريبًا شراء الأعضاء", ephemeral: true });
+}
+
+if (interaction.customId === "buy_balance") {
+  interaction.reply({ content: "💳 قريبًا شراء الرصيد", ephemeral: true });
+}
+
+if (interaction.customId === "check_server") {
+  interaction.reply({ content: "🔍 فحص الخادم قريبًا", ephemeral: true });
+}
 });
 
 // ===== READY =====

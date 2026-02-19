@@ -1,29 +1,44 @@
-const { MessageEmbed, MessageActionRow, MessageButton } = require("discord.js");
+const {
+  MessageEmbed,
+  MessageActionRow,
+  MessageButton
+} = require("discord.js");
+
+const config = require("../config");
 
 module.exports = {
   name: "panel",
   run: async (client, message) => {
 
+    // لو حابب تخليه للإدارة فقط
+    if (
+      config.owners &&
+      !config.owners.includes(message.author.id)
+    ) {
+      return message.reply("❌ الأمر ده للإدارة فقط");
+    }
+
     const embed = new MessageEmbed()
-      .setColor("#0f172a")
-      .setTitle("شراء أعضاء")
+      .setTitle("🛒 شراء أعضاء حقيقية")
       .setDescription(
-`🎮 الرجاء إدخال البوتين لضمان أفضل نسبة دخول  
-🤝 لا تنسى الصلاة على النبي قبل الشراء 💚`
+        "اضغط على الزر بالأسفل لفتح تذكرة شراء أعضاء\n\n" +
+        "⚠️ يمنع السبام – تذكرة واحدة فقط لكل شخص"
       )
-      .setImage("PUT_IMAGE_LINK");
+      .setColor("#0099ff")
+      .setFooter({ text: "Support Team" });
 
     const row = new MessageActionRow().addComponents(
       new MessageButton()
         .setCustomId("open_ticket")
-        .setLabel("شراء أعضاء")
-        .setStyle("SUCCESS")
-        .setEmoji("👥")
+        .setLabel("📩 فتح تذكرة")
+        .setStyle("PRIMARY")
     );
 
-    message.channel.send({
+    await message.channel.send({
       embeds: [embed],
       components: [row]
     });
+
+    message.delete().catch(() => {});
   }
 };

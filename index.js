@@ -12,7 +12,7 @@ const path = require("path");
 const config = require("./config");
 
 // ===== TOKEN =====
-const BOT_TOKEN = process.env.BOT_TOKEN; 
+const BOT_TOKEN = process.env.BOT_TOKEN;
 if (!BOT_TOKEN) {
   console.error("❌ BOT_TOKEN is not defined");
   process.exit(1);
@@ -28,13 +28,9 @@ const client = new Client({
 
 // ===== DATABASE =====
 const dbPath = path.join(__dirname, "database", "data.json");
-
 if (!fs.existsSync("database")) fs.mkdirSync("database");
 if (!fs.existsSync(dbPath)) {
-  fs.writeFileSync(dbPath, JSON.stringify({
-    coinPrice: 0,
-    users: {}
-  }, null, 2));
+  fs.writeFileSync(dbPath, JSON.stringify({ coinPrice: 0, users: {} }, null, 2));
 }
 
 function getData() {
@@ -44,70 +40,94 @@ function saveData(data) {
   fs.writeFileSync(dbPath, JSON.stringify(data, null, 2));
 }
 
-global.getData = getData;
-global.saveData = saveData;
-
 // ===== READY =====
 client.once("ready", () => {
   console.log(`✅ Bot Online: ${client.user.tag}`);
 });
 
-// ===== PREFIX COMMANDS =====
+// ===== MESSAGE HANDLER (واحد فقط) =====
 client.on("messageCreate", async message => {
   if (message.author.bot) return;
 
-  // ===== ADMIN: price =====
+  const data = getData();
+
+  /* ===== ADMIN price ===== */
   if (message.content.startsWith("price")) {
     if (message.author.id !== config.adminId)
       return message.reply("❌ الأمر ده للأدمن فقط");
 
-    const args = message.content.split(" ");
-    const price = parseInt(args[1]);
+    const price = parseInt(message.content.split(" ")[1]);
     if (!price || price <= 0)
       return message.reply("❌ استخدم: price 100");
 
-    const data = getData();
     data.coinPrice = price;
     saveData(data);
-
-    return message.reply(`✅ تم تحديد سعر الكوين = **${price} كريدت**`);
+    return message.reply(`✅ سعر الكوين = **${price} كريدت**`);
   }
 
-  // ===== +coins =====
+  /* ===== +coins ===== */
   if (message.content === `${config.prefix}coins`) {
-    const data = getData();
     const coins = data.users[message.author.id]?.coins || 0;
     return message.reply(`🪙 **رصيدك الحالي:** ${coins} كوين`);
+  }
+
+  /* ===== PROBOT MONITOR ===== */
+  if (
+    message.author.id === config.probotId &&
+    message.content.includes("#credit") &&
+    message.content.includes(config.creditAccountId)
+  ) {
+    try {
+      const creditMatch = message.content.match(/#credit\s+\d+\s+(\d+)/);
+      if (!creditMatch) return;
+
+      const credits = parseInt(creditMatch[1]);
+      const userMatch = message.mentions.users.first();
+      if (!userMatch) return;
+
+      const coins = Math.floor(credits / data.coinPrice);
+      if (coins <= 0) return;
+
+      if (!data.users[userMatch.id])
+        data.users[userMatch.id] = { coins: 0 };
+
+      data.users[userMatch.id].coins += coins;
+      saveData(data);
+
+      return message.channel.send(
+`✅ **تم استلام التحويل**
+👤 ${userMatch}
+💰 ${credits} كريدت
+🪙 ${coins} كوين
+📦 رصيدك الحالي: **${data.users[userMatch.id].coins}**`
+      );
+    } catch (e) {
+      console.error("❌ ProBot Error:", e);
+    }
   }
 });
 
 // ===== INTERACTIONS =====
 client.on("interactionCreate", async interaction => {
 
-  // ===== BUTTONS =====
+  /* ===== BUTTONS ===== */
   if (interaction.isButton()) {
 
-    // شراء رصيد
     if (interaction.customId === "buy_balance") {
       const modal = new Modal()
         .setCustomId("buy_balance_modal")
         .setTitle("شراء رصيد");
 
-      const amountInput = new TextInputComponent()
+      const input = new TextInputComponent()
         .setCustomId("amount")
         .setLabel("عدد الكوينز")
         .setStyle("SHORT")
-        .setPlaceholder("مثال: 10")
         .setRequired(true);
 
-      modal.addComponents(
-        new MessageActionRow().addComponents(amountInput)
-      );
-
+      modal.addComponents(new MessageActionRow().addComponents(input));
       return interaction.showModal(modal);
     }
 
-    // غلق تكت
     if (interaction.customId === "close_ticket") {
       await interaction.reply("🗑️ سيتم غلق التذكرة...");
       return setTimeout(() => {
@@ -116,18 +136,15 @@ client.on("interactionCreate", async interaction => {
     }
   }
 
-  // ===== MODAL SUBMIT =====
+  /* ===== MODAL ===== */
   if (interaction.isModalSubmit()) {
     if (interaction.customId === "buy_balance_modal") {
-      const amount = parseInt(
-        interaction.fields.getTextInputValue("amount")
-      );
-
+      const amount = parseInt(interaction.fields.getTextInputValue("amount"));
       if (!amount || amount <= 0)
-        return interaction.reply({ content: "❌ الكمية غير صحيحة", ephemeral: true });
+        return interaction.reply({ content: "❌ كمية غير صحيحة", ephemeral: true });
 
       const data = getData();
-      if (!data.coinPrice || data.coinPrice <= 0)
+      if (!data.coinPrice)
         return interaction.reply({ content: "❌ سعر الكوين غير محدد", ephemeral: true });
 
       const total = amount * data.coinPrice;
@@ -137,68 +154,17 @@ client.on("interactionCreate", async interaction => {
           color: 0xfacc15,
           description:
 `💳 **إكمال شراء الرصيد**
+🪙 ${amount} كوين
+💰 ${total} كريدت
 
-🪙 الكمية: **${amount} كوين**
-💰 السعر: **${total} كريدت**
-
-📩 الرجاء التحويل:
 \`\`\`
-#credit ${config.probot.creditAccountId} ${total}
+#credit ${config.creditAccountId} ${total}
 \`\`\`
 
-⏱️ لديك **5 دقائق** للتحويل`
+⏱️ لديك 5 دقائق للتحويل`
         }]
       });
     }
-  }
-});
-
-// ===== PROBOT MONITOR =====
-client.on("messageCreate", async message => {
-  try {
-    if (message.author.id !== config.probot.id) return;
-    if (!message.content.includes("has transferred")) return;
-
-    if (!message.content.includes(config.probot.creditAccountId)) return;
-
-    const creditMatch = message.content.match(/`(\d+)`/);
-    if (!creditMatch) return;
-
-    const credits = parseInt(creditMatch[1]);
-
-    const userMatch = message.content.match(/\| (.*?), has transferred/);
-    if (!userMatch) return;
-
-    const username = userMatch[1];
-    const member = message.guild.members.cache.find(
-      m => m.user.username === username
-    );
-    if (!member) return;
-
-    const data = getData();
-    const coins = Math.floor(credits / data.coinPrice);
-    if (coins <= 0) return;
-
-    if (!data.users[member.id]) {
-      data.users[member.id] = { coins: 0 };
-    }
-
-    data.users[member.id].coins += coins;
-    saveData(data);
-
-    message.channel.send(
-`✅ **تم استلام التحويل**
-
-👤 ${member}
-💰 ${credits} كريدت
-🪙 ${coins} كوين
-
-📦 رصيدك الحالي:
-**${data.users[member.id].coins} كوين**`
-    );
-
-  } catch (err) {
-    console.error("❌ ProBot Error:", err);
   }
 });
 

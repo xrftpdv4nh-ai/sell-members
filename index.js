@@ -3,9 +3,7 @@ const {
   Intents,
   MessageEmbed,
   MessageButton,
-  MessageActionRow,
-  Modal,
-  TextInputComponent
+  MessageActionRow
 } = require("discord.js");
 
 const fs = require("fs");
@@ -20,6 +18,14 @@ const Database = require("st.db");
 
 const config = require("./config.js");
 
+/* ================= FIX DATABASE PATH ================= */
+const dbPath = path.join(__dirname, "database");
+if (!fs.existsSync(dbPath)) fs.mkdirSync(dbPath);
+
+const usersdata = new Database({
+  path: path.join(dbPath, "users.json"),
+});
+
 /* ================= CLIENT ================= */
 const client = new Client({
   intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES],
@@ -27,17 +33,11 @@ const client = new Client({
 
 /* ================= EXPRESS ================= */
 const app = express();
-app.listen(process.env.PORT || 3000, () => {
-  console.log("🌍 Website Online");
-});
-
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static("public"));
 
-/* ================= DATABASE ================= */
-const usersdata = new Database({
-  path: "./database/users.json",
-  databaseInObject: true,
+app.listen(process.env.PORT || 3000, () => {
+  console.log("🌍 Website Online");
 });
 
 /* ================= OAUTH ================= */
@@ -54,7 +54,7 @@ passport.use(
       clientID: config.bot.botID,
       clientSecret: config.bot.clientSECRET,
       callbackURL: config.bot.callbackURL,
-      scope: ["identify", "email", "guilds", "guilds.join"],
+      scope: ["identify", "guilds", "guilds.join"],
     },
     (accessToken, refreshToken, profile, done) => {
       usersdata.set(profile.id, { accessToken, refreshToken });
@@ -68,7 +68,7 @@ passport.deserializeUser((u, d) => d(null, u));
 
 app.use(
   session({
-    secret: "secret_session",
+    secret: "session_secret",
     resave: false,
     saveUninitialized: false,
   })
@@ -85,10 +85,10 @@ app.get("/", (req, res) => {
 app.get("/login", passport.authenticate("discord", { failureRedirect: "/" }));
 
 /* ================= READY ================= */
-client.on("ready", async () => {
+client.once("ready", async () => {
   console.log(`🤖 Bot Online: ${client.user.tag}`);
 
-  // Register Slash Commands (بدون REST)
+  // Register slash commands (safe way)
   await client.application.commands.set([
     {
       name: "stock",
@@ -105,7 +105,6 @@ client.on("ready", async () => {
 client.on("messageCreate", async (message) => {
   if (message.author.bot) return;
 
-  /* +send */
   if (message.content === "+send") {
     if (!config.bot.owners.includes(message.author.id)) return;
 
@@ -118,29 +117,23 @@ client.on("messageCreate", async (message) => {
     );
 
     return message.channel.send({
-      content: "اضغط على الزر بالأسفل 👇",
+      content: "اضغط على الزر 👇",
       components: [row],
     });
   }
 
-  /* +users */
   if (message.content === "+users") {
     return message.reply(`📦 الستوك الحالي: ${usersdata.all().length}`);
   }
 
-  /* +help */
   if (message.content === "+help") {
-    return message.reply(
-      `+send\n+users\n/stock\n/panel`
-    );
+    return message.reply("+send\n+users\n/stock\n/panel");
   }
 });
 
 /* ================= SLASH COMMANDS ================= */
 client.on("interactionCreate", async (interaction) => {
   if (interaction.isCommand()) {
-
-    /* /stock */
     if (interaction.commandName === "stock") {
       return interaction.reply({
         content: `📦 **الستوك الحالي:** ${usersdata.all().length} عضو`,
@@ -148,7 +141,6 @@ client.on("interactionCreate", async (interaction) => {
       });
     }
 
-    /* /panel */
     if (interaction.commandName === "panel") {
       const embed = new MessageEmbed()
         .setTitle("بيع أعضاء حقيقية 👥")
@@ -171,13 +163,10 @@ client.on("interactionCreate", async (interaction) => {
     }
   }
 
-  /* ================= BUTTONS ================= */
   if (interaction.isButton()) {
-
-    /* Open Ticket */
     if (interaction.customId === "open_ticket") {
       const ticket = await interaction.guild.channels.create(
-        `ticket-${interaction.user.username}`,
+        `ticket-${interaction.user.id}`,
         {
           type: "GUILD_TEXT",
           parent: config.bot.category,
@@ -202,7 +191,7 @@ client.on("interactionCreate", async (interaction) => {
   }
 });
 
-/* ================= ERRORS ================= */
+/* ================= SAFETY ================= */
 process.on("unhandledRejection", console.error);
 process.on("uncaughtException", console.error);
 

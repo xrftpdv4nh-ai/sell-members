@@ -38,6 +38,9 @@ const client = new Client({
   intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES],
 });
 
+/* ✅ تسجيل أوامر السلاش */
+require("./handlers/registerSlash")(client);
+
 /* ================= EXPRESS ================= */
 const app = express();
 app.listen(process.env.PORT || 3000, () => {
@@ -46,7 +49,6 @@ app.listen(process.env.PORT || 3000, () => {
 
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static("public"));
-
 /* ================= OAUTH ================= */
 const oauth = new DiscordOauth2({
   clientId: config.bot.botID,

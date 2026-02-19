@@ -157,19 +157,32 @@ client.on("interactionCreate", async interaction => {
 
   /* ===== MODAL SUBMIT ===== */
   if (interaction.isModalSubmit()) {
-    if (interaction.customId === "buy_balance_modal") {
-      const amount = parseInt(interaction.fields.getTextInputValue("amount"));
+  if (interaction.customId === "buy_balance_modal") {
 
-      if (!amount || amount <= 0)
-        return interaction.reply({ content: "❌ الكمية غير صحيحة", ephemeral: true });
+    try {
+      const amount = parseInt(
+        interaction.fields.getTextInputValue("amount")
+      );
+
+      if (isNaN(amount) || amount <= 0) {
+        return await interaction.reply({
+          content: "❌ الكمية غير صحيحة",
+          ephemeral: true
+        });
+      }
 
       const data = getData();
-      if (!data.coinPrice || data.coinPrice <= 0)
-        return interaction.reply({ content: "❌ سعر الكوين غير محدد", ephemeral: true });
+
+      if (!data.coinPrice || data.coinPrice <= 0) {
+        return await interaction.reply({
+          content: "❌ سعر الكوين غير محدد بعد",
+          ephemeral: true
+        });
+      }
 
       const total = amount * data.coinPrice;
 
-      return interaction.reply({
+      await interaction.reply({
         embeds: [{
           color: 0xfacc15,
           description:
@@ -186,10 +199,19 @@ client.on("interactionCreate", async interaction => {
 ⏱️ لديك **5 دقائق** لإتمام التحويل`
         }]
       });
+
+    } catch (err) {
+      console.error("❌ Modal Error:", err);
+
+      if (!interaction.replied) {
+        await interaction.reply({
+          content: "❌ حصل خطأ غير متوقع، حاول مرة أخرى",
+          ephemeral: true
+        });
+      }
     }
   }
-});
-
+}
 /* ================= PROBOT MONITOR ================= */
 client.on("messageCreate", async message => {
   try {

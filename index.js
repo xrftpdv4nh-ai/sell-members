@@ -6,7 +6,7 @@ const config = require("./config");
 
 /* ================= TOKEN ================= */
 // 👇👇 حط التوكن هنا فقط
-const BOT_TOKEN = "PUT_YOUR_BOT_TOKEN_HERE";
+const BOT_TOKEN = process.env.BOT_TOKEN;
 
 /* ================= CLIENT ================= */
 const client = new Client({
@@ -33,4 +33,4 @@ client.once("ready", () => {
 });
 
 /* ================= LOGIN ================= */
-‏const BOT_TOKEN = process.env.BOT_TOKEN; 
+client.login(BOT_TOKEN);

@@ -27,6 +27,29 @@ const client = new Client({
 
 client.commands = new Map();
 
+// ===== DATABASE (coins + price) =====
+const dbPath = path.join(__dirname, "database", "data.json");
+
+if (!fs.existsSync("database")) fs.mkdirSync("database");
+if (!fs.existsSync(dbPath)) {
+  fs.writeFileSync(dbPath, JSON.stringify({
+    coinPrice: 0,
+    users: {}
+  }, null, 2));
+}
+
+function getData() {
+  return JSON.parse(fs.readFileSync(dbPath));
+}
+
+function saveData(data) {
+  fs.writeFileSync(dbPath, JSON.stringify(data, null, 2));
+}
+
+// نخليهم جلوبال عشان نستخدمهم في أي ملف
+global.getData = getData;
+global.saveData = saveData;
+
 // ===== LOAD COMMANDS =====
 const commandsPath = path.join(__dirname, "commands");
 
@@ -34,12 +57,6 @@ fs.readdirSync(commandsPath)
   .filter(file => file.endsWith(".js"))
   .forEach(file => {
     const cmd = require(`./commands/${file}`);
-
-    if (!cmd.name || !cmd.run) {
-      console.log(`⚠️ Skip invalid command file: ${file}`);
-      return;
-    }
-
     client.commands.set(cmd.name, cmd);
     console.log(`✅ Loaded command: ${cmd.name}`);
   });
@@ -63,7 +80,7 @@ client.on("messageCreate", async message => {
     command.run(client, message, args);
   } catch (err) {
     console.error(err);
-    message.reply("❌ حصل خطأ في تنفيذ الأمر");
+    message.reply("❌ حصل خطأ");
   }
 });
 
@@ -79,41 +96,14 @@ client.on("interactionCreate", async interaction => {
     require("./tickets/ticketClose")(interaction);
   }
 
-  if (interaction.customId === "buy_members") {
-  interaction.reply({ content: "👥 قريبًا شراء الأعضاء", ephemeral: true });
-}
-
-if (interaction.customId === "buy_balance") {
-  interaction.reply({ content: "💳 قريبًا شراء الرصيد", ephemeral: true });
-}
-
-if (interaction.customId === "check_server") {
-  interaction.reply({ content: "🔍 فحص الخادم قريبًا", ephemeral: true });
-}
+  if (interaction.customId === "buy_balance") {
+    interaction.reply({
+      content: "💳 شراء الرصيد سيتم تفعيله قريبًا",
+      ephemeral: true
+    });
+  }
 });
 
-client.on("messageCreate", async (message) => {
-  if (message.author.bot) return;
-
-  // الأمر بدون prefix
-  if (message.content !== "حذف") return;
-
-  // تحقق من صلاحية الأدمن
-  if (!message.member.permissions.has("ADMINISTRATOR")) {
-    return message.reply("❌ الأمر ده للأدمن فقط");
-  }
-
-  // منع حذف روم مش تكت (اختياري)
-  if (!message.channel.name.startsWith("ticket-")) {
-    return message.reply("❌ الأمر ده يشتغل داخل التكت فقط");
-  }
-
-  await message.reply("🗑️ سيتم حذف الروم بعد 3 ثواني...");
-  
-  setTimeout(() => {
-    message.channel.delete().catch(() => {});
-  }, 3000);
-});
 // ===== READY =====
 client.once("ready", () => {
   console.log(`✅ Logged in as ${client.user.tag}`);

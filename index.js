@@ -3,7 +3,7 @@ const fs = require("fs");
 const path = require("path");
 const config = require("./config");
 
-/* ========== CLIENT ========== */
+/* ================= CLIENT ================= */
 const client = new Client({
   intents: [
     Intents.FLAGS.GUILDS,
@@ -11,16 +11,20 @@ const client = new Client({
   ],
 });
 
-/* ========== COMMANDS MAP (مهم جداً) ========== */
+/* ================= GLOBALS ================= */
 client.commands = new Map();
+global.pendingPurchases = new Map();
 
-/* ========== DATABASE ========== */
+/* ================= DATABASE ================= */
 const dbDir = path.join(__dirname, "database");
 const dbPath = path.join(dbDir, "data.json");
 
 if (!fs.existsSync(dbDir)) fs.mkdirSync(dbDir);
 if (!fs.existsSync(dbPath)) {
-  fs.writeFileSync(dbPath, JSON.stringify({ coinPrice: 0, users: {} }, null, 2));
+  fs.writeFileSync(
+    dbPath,
+    JSON.stringify({ coinPrice: 0, users: {} }, null, 2)
+  );
 }
 
 function getData() {
@@ -33,7 +37,7 @@ function saveData(data) {
 global.getData = getData;
 global.saveData = saveData;
 
-/* ========== LOAD COMMANDS ========== */
+/* ================= LOAD COMMANDS ================= */
 const commandsPath = path.join(__dirname, "commands");
 if (fs.existsSync(commandsPath)) {
   fs.readdirSync(commandsPath)
@@ -47,51 +51,56 @@ if (fs.existsSync(commandsPath)) {
     });
 }
 
-/* ========== READY ========== */
+/* ================= READY ================= */
 client.once("ready", () => {
   console.log(`✅ Bot Online: ${client.user.tag}`);
 });
 
-/* ========== MESSAGE COMMANDS ========== */
-client.on("messageCreate", async message => {
+/* ================= MESSAGE CREATE (واحد بس) ================= */
+client.on("messageCreate", async (message) => {
   if (message.author.bot) return;
 
-  /* ADMIN price */
+  /* ===== ADMIN: price ===== */
   if (message.content.startsWith("price")) {
     if (message.author.id !== config.adminId)
       return message.reply("❌ الأمر ده للأدمن فقط");
 
     const price = parseInt(message.content.split(" ")[1]);
-    if (!price) return message.reply("❌ استخدم: price 100");
+    if (!price || price <= 0)
+      return message.reply("❌ استخدم: price 100");
 
     const data = getData();
     data.coinPrice = price;
     saveData(data);
 
-    return message.reply(`✅ 1 Coin = **${price} Credit**`);
+    return message.reply(`✅ **1 Coin = ${price} Credit**`);
   }
 
-  /* PREFIX COMMANDS */
-  if (!message.content.startsWith(config.prefix)) return;
+  /* ===== PREFIX COMMANDS ===== */
+  if (message.content.startsWith(config.prefix)) {
+    const args = message.content
+      .slice(config.prefix.length)
+      .trim()
+      .split(/ +/);
 
-  const args = message.content.slice(config.prefix.length).trim().split(/ +/);
-  const name = args.shift().toLowerCase();
-  const command = client.commands.get(name);
-  if (!command) return;
+    const name = args.shift().toLowerCase();
+    const command = client.commands.get(name);
+    if (!command) return;
 
-  try {
-    command.run(client, message, args);
-  } catch (e) {
-    console.error(e);
-    message.reply("❌ حصل خطأ");
+    try {
+      await command.run(client, message, args);
+    } catch (err) {
+      console.error(err);
+      message.reply("❌ حصل خطأ أثناء تنفيذ الأمر");
+    }
   }
+
+  /* ===== PROBOT MONITOR ===== */
+  require("./handlers/probotMonitor")(client, message);
 });
 
-/* ========== INTERACTIONS ========== */
+/* ================= INTERACTIONS ================= */
 require("./handlers/interactionHandler")(client);
 
-/* ========== PROBOT MONITOR ========== */
-require("./handlers/probotMonitor")(client);
-
-/* ========== LOGIN ========== */
+/* ================= LOGIN ================= */
 client.login(process.env.BOT_TOKEN);

@@ -5,7 +5,7 @@ module.exports = {
 
   probot: {
     id: "282859044593598464",          // ID بروبوت
-    creditAccountId: "1308224732625375232"
+    creditAccountId: "1035345058561540127"
   },
 
   ticket: {

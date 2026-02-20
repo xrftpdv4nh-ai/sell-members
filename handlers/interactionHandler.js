@@ -53,10 +53,10 @@ module.exports = (client) => {
         );
 
         const embed = new MessageEmbed()
-          .setTitle("🎟️ تذكرة شراء أعضاء")
+          .setTitle("🎟️ تذكرة شراء")
           .setDescription(
             "اختر العملية من الأزرار بالأسفل\n\n" +
-            "💳 شراء رصيد\n👥 شراء أعضاء"
+            "💳 شراء رصيد"
           )
           .setColor("#22c55e");
 
@@ -138,6 +138,13 @@ module.exports = (client) => {
       }
 
       const total = amount * data.coinPrice;
+
+      /* ✅ أهم سطر في النظام كله */
+      global.pendingPurchases.set(interaction.user.id, {
+        coins: amount,
+        price: total,
+        channelId: interaction.channel.id
+      });
 
       return interaction.reply({
         embeds: [{

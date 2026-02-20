@@ -7,52 +7,48 @@ module.exports = (client) => {
     if (message.author.id !== config.probot.id) return;
 
     // لازم Embed
-    if (!message.embeds || !message.embeds.length) return;
-
+    if (!message.embeds.length) return;
     const embed = message.embeds[0];
     if (!embed.description) return;
 
-    // مثال:
-    // 💰 | kg_j, has transferred $9 to @Lamiaa.
-
-    // المبلغ
+    // نطلع المبلغ
     const amountMatch = embed.description.match(/\$(\d+)/);
     if (!amountMatch) return;
 
     const credits = parseInt(amountMatch[1]);
     if (!credits || credits <= 0) return;
 
-    // المنشن (المستلم)
-    const mentionMatch = embed.description.match(/<@!?(\d+)>/);
-    if (!mentionMatch) return;
+    // نجيب صاحب التكت (أول شخص مش بوت)
+    const messages = await message.channel.messages.fetch({ limit: 20 });
+    const ticketOwner = messages.find(
+      m => !m.author.bot && m.content
+    )?.author;
 
-    const userId = mentionMatch[1];
-    const member = await message.guild.members.fetch(userId).catch(() => null);
-    if (!member) return;
+    if (!ticketOwner) return;
 
     const data = global.getData();
     if (!data.coinPrice || data.coinPrice <= 0) return;
 
-    // نحسب الكوينز (حتى لو في ضريبة)
+    // نحسب الكوينز (حتى مع الضريبة)
     const coins = Math.round(credits / data.coinPrice);
     if (coins <= 0) return;
 
-    if (!data.users[member.id]) {
-      data.users[member.id] = { coins: 0 };
+    if (!data.users[ticketOwner.id]) {
+      data.users[ticketOwner.id] = { coins: 0 };
     }
 
-    data.users[member.id].coins += coins;
+    data.users[ticketOwner.id].coins += coins;
     global.saveData(data);
 
     message.channel.send(
 `✅ **تم استلام التحويل بنجاح**
 
-👤 ${member}
+👤 ${ticketOwner}
 💰 ${credits} كريدت
 🪙 تمت إضافة **${coins} كوين**
 
 📦 رصيدك الحالي:
-**${data.users[member.id].coins} كوين**`
+**${data.users[ticketOwner.id].coins} كوين**`
     );
   });
 };

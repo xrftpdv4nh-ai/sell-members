@@ -597,44 +597,67 @@ client.on('messageCreate', async message => {
       });
     }
 
-    // إيمبد التنفيذ
-    const processingEmbed = new MessageEmbed()
-      .setColor('#ffff00')
-      .setDescription('<a:loading:123456789012345678> **جاري إدخال الأعضاء...**')
-      .addField('السيرفر', `\`${guild.name}\``, true)
-      .addField('العدد المطلوب', `\`${amount}\` عضو`, true);
+// ====== دالة التأخير ======
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
-    await msg.edit({ embeds: [processingEmbed], content: null });
+// إيمبد التنفيذ
+let processingEmbed = new MessageEmbed()
+  .setColor('#ffff00')
+  .setDescription('<a:loading:123456789012345678> **جاري إدخال الأعضاء...**')
+  .addField('السيرفر', `\`${guild.name}\``, true)
+  .addField('العدد المطلوب', `\`${amount}\` عضو`, true)
+  .addField('🟢 تم إدخال', `\`0\` عضو`, true)
+  .addField('🔴 فشل', `\`${amount}\` عضو`, true);
 
-    // تنفيذ العملية
-    for (let index = 0; index < amount; index++) {
-      await oauth.addMember({
-        guildId: guild.id,
-        userId: alld[index].ID,
-        accessToken: alld[index].data.accessToken,
-        botToken: client.token
-      }).then(() => count++).catch(() => {});
-    }
+await msg.edit({ embeds: [processingEmbed], content: null });
 
-    // إيمبد النتيجة النهائية
-    const resultEmbed = new MessageEmbed()
-      .setColor('#00ff00')
-      .setTitle('✅ تم تنفيذ الأمر بنجاح')
-      .setThumbnail(guild.iconURL())
-      .addFields(
-        { name: '🟢 تم إدخال', value: `\`${count}\` عضو`, inline: true },
-        { name: '🔴 لم يتم إدخال', value: `\`${amount - count}\` عضو`, inline: true },
-        { name: '🔵 العدد المطلوب', value: `\`${amount}\` عضو`, inline: true }
-      )
-      .setFooter({ 
-        text: `بواسطة ${message.author.username} | ${new Date().toLocaleString()}`,
-        iconURL: message.author.displayAvatarURL() 
-      });
-
-    await msg.edit({ embeds: [resultEmbed], content: null }).catch(() => {
-      message.channel.send({ embeds: [resultEmbed] });
+// تنفيذ العملية (واحد واحد)
+for (let index = 0; index < amount; index++) {
+  try {
+    await oauth.addMember({
+      guildId: guild.id,
+      userId: alld[index].ID,
+      accessToken: alld[index].data.accessToken,
+      botToken: client.token
     });
+
+    count++;
+  } catch (err) {
+    // فشل دخول عضو
   }
+
+  // تحديث العداد لايف
+  processingEmbed = new MessageEmbed()
+    .setColor('#ffff00')
+    .setDescription('<a:loading:123456789012345678> **جاري إدخال الأعضاء...**')
+    .addField('السيرفر', `\`${guild.name}\``, true)
+    .addField('العدد المطلوب', `\`${amount}\` عضو`, true)
+    .addField('🟢 تم إدخال', `\`${count}\` عضو`, true)
+    .addField('🔴 لم يتم إدخال', `\`${amount - count}\` عضو`, true);
+
+  await msg.edit({ embeds: [processingEmbed] }).catch(() => {});
+
+  // ⏱️ تأخير بين كل عضو (3 ثواني)
+  await sleep(3000);
+}
+
+// إيمبد النتيجة النهائية
+const resultEmbed = new MessageEmbed()
+  .setColor('#00ff00')
+  .setTitle('✅ تم تنفيذ الأمر بنجاح')
+  .setThumbnail(guild.iconURL())
+  .addFields(
+    { name: '🟢 تم إدخال', value: `\`${count}\` عضو`, inline: true },
+    { name: '🔴 لم يتم إدخال', value: `\`${amount - count}\` عضو`, inline: true },
+    { name: '🔵 العدد المطلوب', value: `\`${amount}\` عضو`, inline: true }
+  )
+  .setFooter({ 
+    text: `بواسطة ${message.author.username} | ${new Date().toLocaleString()}`,
+    iconURL: message.author.displayAvatarURL() 
+  });
+
+await msg.edit({ embeds: [resultEmbed], content: null }).catch(() => {
+  message.channel.send({ embeds: [resultEmbed] });
 });
 client.on('messageCreate', async message => {
   if (message.content.startsWith(prefix + 'refresh')) {

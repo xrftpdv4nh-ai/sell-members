@@ -145,7 +145,10 @@ client.on("interactionCreate", async interaction => {
 /* ================= PROBOT MONITOR ================= */
 client.on("messageCreate", async message => {
   try {
+    if (!config.probot || !config.probot.id) return;
     if (message.author.id !== config.probot.id) return;
+
+    if (!config.probot.creditAccountId) return;
     if (!message.content.includes("has transferred")) return;
     if (!message.content.includes(config.probot.creditAccountId)) return;
 
@@ -153,6 +156,7 @@ client.on("messageCreate", async message => {
     if (!creditMatch) return;
 
     const credits = parseInt(creditMatch[1]);
+
     const userMatch = message.content.match(/\| (.*?), has transferred/);
     if (!userMatch) return;
 

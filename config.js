@@ -6,7 +6,7 @@ module.exports = {
     "ClientId": "1474149543686832299",
     "serverinvte": "https://discord.gg/aCHmYayjKR",
     "clientSECRET": "m9CmE9FRoOFdOGyJRniktK-9E3vfirKq",
-    "callbackURL": "https://sell-members-production.up.railway.app/login",
+    "callbackURL": "https://sell-members-production.up.railway.app/callback",
     "inviteBotUrl": "https://discord.com/oauth2/authorize?client_id=1279423025980112988&permissions=8&integration_type=0&scope=bot",
     "TheLinkVerfy": "https://sell-members-production.up.railway.app/login",
     "prefix": "-",

@@ -1,32 +1,44 @@
-const config = require("../config");
-
 module.exports = async (client, message) => {
   try {
-    if (message.author.id !== config.probot.id) return;
+    // نتأكد إنها رسالة ProBot
+    if (message.author.id !== "282859044593598464") return;
     if (!message.content.includes("has transferred")) return;
 
-    const pending = global.pendingPurchases.get(message.channel.id);
-    if (!pending) return;
+    // مفيش طلبات شراء معلقة
+    if (global.pendingPurchases.size === 0) return;
 
+    // نجيب آخر عملية شراء
+    const [userId, purchase] = Array.from(global.pendingPurchases.entries()).pop();
+
+    const { coins, price } = purchase;
+
+    // نضيف الكوينز
     const data = global.getData();
 
-    if (!data.users[pending.userId]) {
-      data.users[pending.userId] = { coins: 0 };
+    if (!data.users[userId]) {
+      data.users[userId] = { coins: 0 };
     }
 
-    data.users[pending.userId].coins += pending.coins;
+    data.users[userId].coins += coins;
     global.saveData(data);
 
-    global.pendingPurchases.delete(message.channel.id);
+    // نجيب العضو
+    const member = await message.guild.members.fetch(userId).catch(() => null);
 
-    await message.channel.send(
-`✅ **تم تأكيد الدفع**
+    // نأكد العملية
+    message.channel.send(
+`✅ **تم تأكيد عملية الشراء**
 
-👤 <@${pending.userId}>
-🪙 تمت إضافة **${pending.coins} كوين**
+👤 ${member ? member : `<@${userId}>`}
+🪙 تمت إضافة **${coins} كوين**
+💰 المبلغ المدفوع: **${price} كريدت**
+
 📦 رصيدك الحالي:
-**${data.users[pending.userId].coins} كوين**`
+**${data.users[userId].coins} كوين**`
     );
+
+    // نمسح العملية
+    global.pendingPurchases.delete(userId);
 
   } catch (err) {
     console.error("❌ ProBot Monitor Error:", err);

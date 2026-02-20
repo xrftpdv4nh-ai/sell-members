@@ -1,57 +1,27 @@
-module.exports = async (message, config, getData, saveData) => {
-  try {
-    // نتأكد إن الرسالة من ProBot
+const config = require("../config");
+
+module.exports = client => {
+  client.on("messageCreate", async message => {
     if (message.author.id !== config.probot.id) return;
-
-    // صيغة تحويل ProBot
-    // Example:
-    // 💸 | Ahmed, has transferred `100` credits to <@ID>
     if (!message.content.includes("has transferred")) return;
-    if (!message.content.includes(config.probot.creditAccountId)) return;
 
-    // استخراج عدد الكريدت
-    const creditMatch = message.content.match(/`(\d+)`/);
-    if (!creditMatch) return;
+    const credit = message.content.match(/`(\d+)`/);
+    if (!credit) return;
 
-    const credits = parseInt(creditMatch[1]);
-    if (credits <= 0) return;
-
-    // استخراج اسم الشخص
-    const userMatch = message.content.match(/\| (.*?), has transferred/);
-    if (!userMatch) return;
-
-    const username = userMatch[1].trim();
-
-    const member = message.guild.members.cache.find(
-      m => m.user.username === username
-    );
-    if (!member) return;
-
-    const data = getData();
-    if (!data.coinPrice || data.coinPrice <= 0) return;
+    const credits = parseInt(credit[1]);
+    const data = global.getData();
 
     const coins = Math.floor(credits / data.coinPrice);
     if (coins <= 0) return;
 
-    if (!data.users[member.id]) {
-      data.users[member.id] = { coins: 0 };
-    }
+    const user = message.mentions.users.first();
+    if (!user) return;
 
-    data.users[member.id].coins += coins;
-    saveData(data);
+    if (!data.users[user.id]) data.users[user.id] = { coins: 0 };
+    data.users[user.id].coins += coins;
 
-    message.channel.send(
-`✅ **تم استلام التحويل بنجاح**
+    global.saveData(data);
 
-👤 ${member}
-💰 ${credits} كريدت
-🪙 ${coins} كوين
-
-📦 رصيدك الحالي:
-**${data.users[member.id].coins} كوين**`
-    );
-
-  } catch (err) {
-    console.error("❌ ProBot Monitor Error:", err);
-  }
+    message.channel.send(`✅ ${user} تمت إضافة **${coins} كوين**`);
+  });
 };

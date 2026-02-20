@@ -1950,3 +1950,5 @@ client.on('messageCreate', async (message) => {
     message.reply(`اصبح سعر الكوينز **${args[1]}**`);
   }
 });
+
+client.login(process.env.BOT_TOKEN); // ✅ تمام 100%

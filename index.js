@@ -1951,4 +1951,8 @@ client.on('messageCreate', async (message) => {
   }
 });
 
-client.login(process.env.BOT_TOKEN); // ✅ تمام 100%
+client.on('ready', () => {
+  console.log('Bot is online');
+});
+
+client.login(process.env.BOT_TOKEN);

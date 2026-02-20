@@ -45,8 +45,7 @@ require('./slash.js')
 app.get('/', function (req, res) {
   res.send('Hello World')
 })
-const prefix = config.bot.prefix; 
-app.listen(3000)
+const prefix = config.bot.prefix;
 var scopes = ['identify', 'guilds', 'guilds.join'];
 
 passport.use(new DiscordStrategy({
@@ -1951,8 +1950,17 @@ client.on('messageCreate', async (message) => {
   }
 });
 
+/* ===== DISCORD BOT ===== */
 client.on('ready', () => {
   console.log('Bot is online');
 });
 
 client.login(process.env.BOT_TOKEN);
+
+
+/* ===== EXPRESS (Railway) ===== */
+const PORT = process.env.PORT || 3000;
+
+app.listen(PORT, () => {
+  console.log('Web server running on port ' + PORT);
+});

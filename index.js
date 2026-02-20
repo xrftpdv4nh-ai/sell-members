@@ -601,15 +601,16 @@ client.on('messageCreate', async message => {
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 // إيمبد التنفيذ
+// إيمبد التنفيذ
 const processingEmbed = new MessageEmbed()
-    .setColor('#ffff00')
-    .setDescription('<a:loading:123456789012345678> **جاري إدخال الأعضاء...**')
-    .addField('السيرفر', `\`${guild.name}\``, true)
-    .addField('العدد المطلوب', `\`${amount}\` عضو`, true);
+  .setColor('#ffff00')
+  .setDescription('<a:loading:123456789012345678> **جاري إدخال الأعضاء...**')
+  .addField('السيرفر', `\`${guild.name}\``, true)
+  .addField('العدد المطلوب', `\`${amount}\` عضو`, true);
 
-  const msg = await message.reply({ embeds: [processingEmbed] });
-
-await msg.edit({ embeds: [processingEmbed], content: null });
+const progressMsg = await message.reply({
+  embeds: [processingEmbed]
+});
 
 // تنفيذ العملية (واحد واحد)
 for (let index = 0; index < amount; index++) {
@@ -622,23 +623,20 @@ for (let index = 0; index < amount; index++) {
     });
 
     count++;
-  } catch (err) {
-    // فشل دخول عضو
-  }
 
-  // تحديث العداد لايف
-  processingEmbed = new MessageEmbed()
-    .setColor('#ffff00')
-    .setDescription('<a:loading:123456789012345678> **جاري إدخال الأعضاء...**')
-    .addField('السيرفر', `\`${guild.name}\``, true)
-    .addField('العدد المطلوب', `\`${amount}\` عضو`, true)
-    .addField('🟢 تم إدخال', `\`${count}\` عضو`, true)
-    .addField('🔴 لم يتم إدخال', `\`${amount - count}\` عضو`, true);
+    // تحديث العداد أثناء التنفيذ
+    processingEmbed.spliceFields(1, 1, {
+      name: 'تم إدخال',
+      value: `${count}/${amount} عضو`,
+      inline: true
+    });
 
-  await msg.edit({ embeds: [processingEmbed] }).catch(() => {});
+    await progressMsg.edit({ embeds: [processingEmbed] });
 
-  // ⏱️ تأخير بين كل عضو (3 ثواني)
-  await sleep(3000);
+    // تأخير علشان ما يبقاش رشق
+    await new Promise(r => setTimeout(r, 2000));
+
+  } catch (e) {}
 }
 
 // إيمبد النتيجة النهائية
@@ -656,9 +654,7 @@ const resultEmbed = new MessageEmbed()
     iconURL: message.author.displayAvatarURL() 
   });
 
-await msg.edit({ embeds: [resultEmbed], content: null }).catch(() => {
-  message.channel.send({ embeds: [resultEmbed] });
-});
+await progressMsg.edit({ embeds: [resultEmbed] });
 client.on('messageCreate', async message => {
   if (message.content.startsWith(prefix + 'refresh')) {
     if (!config.bot.owners.includes(`${message.author.id}`)) {

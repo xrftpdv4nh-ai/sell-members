@@ -11,7 +11,6 @@ module.exports = {
     "TheLinkVerfy": "https://sell-members-production.up.railway.app/login",
     "prefix": "-",
     "ceatogry": "1474149798734073946",
-    "TOKEN": "MTI3OTQyMzAyNTk4MDExMjk4OA.G_k_SB.KPboUdwqTgvJtTHL8llo_B3lh331pF3vNnH2Ns",
     "TraId": "1035345058561540127",
     "price": "1",
     "channelId": "1474150022713970913",

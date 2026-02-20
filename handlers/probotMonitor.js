@@ -3,44 +3,38 @@ const config = require("../config");
 module.exports = (client) => {
   client.on("messageCreate", async (message) => {
 
-    // لازم يكون بروبوت
+    // لازم يكون ProBot
     if (message.author.id !== config.probot.id) return;
 
     // لازم Embed
-    if (!message.embeds || message.embeds.length === 0) return;
+    if (!message.embeds || !message.embeds.length) return;
 
     const embed = message.embeds[0];
     if (!embed.description) return;
 
-    // لازم يكون تحويل كريدت
-    if (!embed.description.includes("Credit")) return;
-    if (!embed.description.includes(config.probot.creditAccountId)) return;
+    // مثال:
+    // 💰 | kg_j, has transferred $9 to @Lamiaa.
 
-    /*
-      مثال رسالة بروبوت:
-      💸 | Lamiaa has transferred `200` Credit to <@123456>
-    */
+    // المبلغ
+    const amountMatch = embed.description.match(/\$(\d+)/);
+    if (!amountMatch) return;
 
-    const creditMatch = embed.description.match(/`(\d+)`/);
-    if (!creditMatch) return;
-
-    const credits = parseInt(creditMatch[1]);
+    const credits = parseInt(amountMatch[1]);
     if (!credits || credits <= 0) return;
 
-    const userMatch = embed.description.match(/\|\s(.+?)\shas transferred/);
-    if (!userMatch) return;
+    // المنشن (المستلم)
+    const mentionMatch = embed.description.match(/<@!?(\d+)>/);
+    if (!mentionMatch) return;
 
-    const username = userMatch[1];
-
-    const member = message.guild.members.cache.find(
-      m => m.user.username === username
-    );
+    const userId = mentionMatch[1];
+    const member = await message.guild.members.fetch(userId).catch(() => null);
     if (!member) return;
 
     const data = global.getData();
     if (!data.coinPrice || data.coinPrice <= 0) return;
 
-    const coins = Math.floor(credits / data.coinPrice);
+    // نحسب الكوينز (حتى لو في ضريبة)
+    const coins = Math.round(credits / data.coinPrice);
     if (coins <= 0) return;
 
     if (!data.users[member.id]) {

@@ -601,13 +601,13 @@ client.on('messageCreate', async message => {
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 // إيمبد التنفيذ
-let processingEmbed = new MessageEmbed()
-  .setColor('#ffff00')
-  .setDescription('<a:loading:123456789012345678> **جاري إدخال الأعضاء...**')
-  .addField('السيرفر', `\`${guild.name}\``, true)
-  .addField('العدد المطلوب', `\`${amount}\` عضو`, true)
-  .addField('🟢 تم إدخال', `\`0\` عضو`, true)
-  .addField('🔴 فشل', `\`${amount}\` عضو`, true);
+const processingEmbed = new MessageEmbed()
+    .setColor('#ffff00')
+    .setDescription('<a:loading:123456789012345678> **جاري إدخال الأعضاء...**')
+    .addField('السيرفر', `\`${guild.name}\``, true)
+    .addField('العدد المطلوب', `\`${amount}\` عضو`, true);
+
+  const msg = await message.reply({ embeds: [processingEmbed] });
 
 await msg.edit({ embeds: [processingEmbed], content: null });
 

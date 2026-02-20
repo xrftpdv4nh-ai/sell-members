@@ -3,6 +3,7 @@ module.exports = {
     "owners": ["1035345058561540127"],
     "botID": "1279423025980112988",
     "GuildId": "1275275223431647355",
+    "TOKEN:" "",
     "ClientId": "1474149543686832299",
     "serverinvte": "https://discord.gg/aCHmYayjKR",
     "clientSECRET": "m9CmE9FRoOFdOGyJRniktK-9E3vfirKq",
@@ -23,6 +24,6 @@ module.exports = {
     "LogChannelOwners": "1474150012228210868"
   },
   "website": {
-    "PORT": ""
+    "PORT": "3000"
   }
 };

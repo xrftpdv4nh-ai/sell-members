@@ -3,16 +3,30 @@ const express = require("express");
 const session = require("express-session");
 const passport = require("passport");
 const fs = require("fs");
-const path = require("path");
 const config = require("./config");
 
 const client = new Client({
-  intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES]
+  intents: [
+    Intents.FLAGS.GUILDS,
+    Intents.FLAGS.GUILD_MESSAGES,
+    Intents.FLAGS.GUILD_MEMBERS
+  ]
 });
 
 const app = express();
 
-/* ===== EXPRESS ===== */
+/* ===== WEB SERVER (REQUIRED FOR RAILWAY) ===== */
+const PORT = process.env.PORT || 3000;
+
+app.get("/", (req, res) => {
+  res.send("OAuth Bot Running");
+});
+
+app.listen(PORT, () => {
+  console.log("Web server running on port", PORT);
+});
+
+/* ===== SESSION ===== */
 app.use(
   session({
     secret: "oauth-secret",
@@ -29,9 +43,9 @@ require("./oauth/passport")(passport);
 require("./oauth/verify")(app, passport);
 require("./oauth/callback")(app, passport, client);
 
-/* ===== LOAD DATABASE ===== */
+/* ===== DATABASE ===== */
 if (!fs.existsSync("./database/users.json")) {
-  fs.writeFileSync("./database/users.json", JSON.stringify([]));
+  fs.writeFileSync("./database/users.json", JSON.stringify([], null, 2));
 }
 
 /* ===== COMMANDS ===== */
@@ -47,4 +61,4 @@ client.on("messageCreate", async message => {
   }
 });
 
-client.login(config.bot.token);
+client.login(process.env.BOT_TOKEN);

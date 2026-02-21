@@ -8,7 +8,7 @@ module.exports = (app, passport, client) => {
     passport.authenticate("discord", { failureRedirect: "/failed" }),
     async (req, res) => {
       try {
-        // ===== حفظ المستخدم =====
+        // حفظ المستخدم
         let user = await User.findOne({ discordId: req.user.id });
 
         if (!user) {
@@ -18,13 +18,18 @@ module.exports = (app, passport, client) => {
             accessToken: req.user.accessToken,
             refreshToken: req.user.refreshToken
           });
+        } else {
+          // تحديث التوكن لو موجود
+          user.accessToken = req.user.accessToken;
+          user.refreshToken = req.user.refreshToken;
+          await user.save();
         }
 
-        // ===== إضافة رول تلقائي =====
-        try {
-          const guild = await client.guilds.fetch(config.bot.guildId);
-          const member = await guild.members.fetch(req.user.id);
+        // ===== إضافة الرول =====
+        const guild = await client.guilds.fetch(config.bot.mainGuild);
+        const member = await guild.members.fetch(req.user.id).catch(() => null);
 
+        if (member) {
           const settings = await GuildSettings.findOne({
             guildId: guild.id
           });
@@ -32,39 +37,36 @@ module.exports = (app, passport, client) => {
           if (settings?.verifiedRole) {
             const role = guild.roles.cache.get(settings.verifiedRole);
 
-            if (role && member && !member.roles.cache.has(role.id)) {
-              await member.roles.add(role);
+            if (role && !member.roles.cache.has(role.id)) {
+              await member.roles.add(role.id);
             }
           }
-        } catch (e) {
-          console.log("⚠️ Role add skipped:", e.message);
         }
 
-        // ===== لوج نجاح =====
+        // ===== لوج =====
         try {
           const ch = await client.channels.fetch(config.logs.success);
           if (ch) {
             ch.send(
-              `✅ **OAuth Verified**
-👤 ${user.username}
-🆔 ${user.discordId}`
+              `✅ **OAuth Verified**\n👤 ${user.username}\n🆔 ${user.discordId}`
             );
           }
         } catch {}
 
+        // صفحة النجاح
         res.send(`
-          <h2>✅ تم التوثيق بنجاح</h2>
-          <p>تقدر تقفل الصفحة.</p>
+          <h2>✅ تم توثيق حسابك بنجاح</h2>
+          <p>تقدر تقفل الصفحة وترجع للسيرفر</p>
         `);
 
       } catch (err) {
-        console.error("❌ OAuth Error:", err);
-        res.send("❌ Error during OAuth");
+        console.error("OAuth Callback Error:", err);
+        res.send("❌ حصل خطأ أثناء التوثيق");
       }
     }
   );
 
   app.get("/failed", (req, res) => {
-    res.send("❌ OAuth Failed");
+    res.send("❌ فشل التوثيق");
   });
 };

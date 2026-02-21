@@ -15,6 +15,7 @@ module.exports = {
       return message.reply("❌ منشن الرول أو حط الـ ID");
     }
 
+    // تأكد إن البوت أعلى من الرول
     if (role.position >= message.guild.me.roles.highest.position) {
       return message.reply("❌ الرول أعلى من البوت");
     }
@@ -22,7 +23,7 @@ module.exports = {
     await GuildSettings.findOneAndUpdate(
       { guildId: message.guild.id },
       { verifiedRole: role.id },
-      { upsert: true }
+      { upsert: true, new: true }
     );
 
     message.reply(`✅ تم تعيين رول التوثيق: **${role.name}**`);

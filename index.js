@@ -3,9 +3,7 @@ const { Client, Intents } = require("discord.js");
 const express = require("express");
 const session = require("express-session");
 const passport = require("passport");
-const mongoose = require("mongoose"); // ✅ MongoDB
-const fs = require("fs");
-const path = require("path");
+const mongoose = require("mongoose");
 const config = require("./config");
 
 // ===== DISCORD CLIENT =====
@@ -13,12 +11,14 @@ const client = new Client({
   intents: [
     Intents.FLAGS.GUILDS,
     Intents.FLAGS.GUILD_MESSAGES
-    // ⚠️ لا نستخدم GUILD_MEMBERS لأن الإضافة بـ OAuth
   ]
 });
 
 // ===== EXPRESS APP =====
 const app = express();
+
+// ===== BASIC SECURITY =====
+app.disable("x-powered-by");
 
 // ===== MIDDLEWARE =====
 app.use(express.urlencoded({ extended: false }));
@@ -27,9 +27,15 @@ app.use(express.json());
 // ===== SESSION =====
 app.use(
   session({
-    secret: "oauth-secret",
+    name: "oauth.sid",
+    secret: process.env.SESSION_SECRET || "TEMP_SECRET_CHANGE_ME",
     resave: false,
-    saveUninitialized: false
+    saveUninitialized: false,
+    cookie: {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      maxAge: 1000 * 60 * 60 * 24 // 24h
+    }
   })
 );
 
@@ -40,30 +46,32 @@ app.use(passport.session());
 // ===== MONGODB CONNECTION =====
 (async () => {
   try {
-    await mongoose.connect(process.env.MONGODB_URI, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true
-    });
+    if (!process.env.MONGODB_URI) {
+      throw new Error("MONGODB_URI is not defined");
+    }
+
+    await mongoose.connect(process.env.MONGODB_URI);
 
     console.log("🟢 MongoDB Connected Successfully");
   } catch (err) {
-    console.error("🔴 MongoDB Connection Error:", err);
+    console.error("🔴 MongoDB Connection Error:", err.message);
+    process.exit(1); // يقفل لو الداتابيز واقعة
   }
 })();
 
-// ===== WEB SERVER (RAILWAY REQUIRED) =====
+// ===== WEB SERVER =====
 const PORT = process.env.PORT || 3000;
 
 app.get("/", (req, res) => {
-  res.send("✅ OAuth Bot Running");
+  res.status(200).send("✅ OAuth Bot Running");
 });
 
-// ===== TEST LOGIN ROUTE =====
+// ===== OAUTH LOGIN CALLBACK CHECK =====
 app.get("/login", (req, res) => {
   if (!req.query.code) {
-    return res.send("❌ No OAuth code provided");
+    return res.status(400).send("❌ No OAuth code provided");
   }
-  res.send("✅ OAuth callback reached successfully");
+  res.send("✅ OAuth code received");
 });
 
 // ===== START SERVER =====

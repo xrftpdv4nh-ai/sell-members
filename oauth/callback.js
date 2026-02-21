@@ -8,7 +8,7 @@ module.exports = (app, passport, client) => {
     passport.authenticate("discord", { failureRedirect: "/failed" }),
     async (req, res) => {
       try {
-        // حفظ المستخدم
+        // ===== حفظ المستخدم =====
         let user = await User.findOne({ discordId: req.user.id });
 
         if (!user) {
@@ -19,14 +19,13 @@ module.exports = (app, passport, client) => {
             refreshToken: req.user.refreshToken
           });
         } else {
-          // تحديث التوكن لو موجود
           user.accessToken = req.user.accessToken;
           user.refreshToken = req.user.refreshToken;
           await user.save();
         }
 
         // ===== إضافة الرول =====
-        const guild = await client.guilds.fetch(config.bot.mainGuild);
+        const guild = await client.guilds.fetch(config.bot.guildId);
         const member = await guild.members.fetch(req.user.id).catch(() => null);
 
         if (member) {
@@ -53,10 +52,9 @@ module.exports = (app, passport, client) => {
           }
         } catch {}
 
-        // صفحة النجاح
         res.send(`
           <h2>✅ تم توثيق حسابك بنجاح</h2>
-          <p>تقدر تقفل الصفحة وترجع للسيرفر</p>
+          <p>ارجع للسيرفر، الرول اتضاف تلقائيًا</p>
         `);
 
       } catch (err) {

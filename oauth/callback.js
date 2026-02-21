@@ -1,87 +1,43 @@
-const fs = require("fs");
-const path = require("path");
+const User = require("../database/User");
 const config = require("../config");
 
 module.exports = (app, passport, client) => {
   app.get(
     "/callback",
-    passport.authenticate("discord", {
-      failureRedirect: "/failed"
-    }),
+    passport.authenticate("discord", { failureRedirect: "/failed" }),
     async (req, res) => {
       try {
-        const dbDir = path.join(__dirname, "..", "database");
-        const dbPath = path.join(dbDir, "users.json");
+        let user = await User.findOne({ discordId: req.user.id });
 
-        // ✅ تأكيد وجود فولدر database
-        if (!fs.existsSync(dbDir)) {
-          fs.mkdirSync(dbDir, { recursive: true });
-        }
-
-        // ✅ تأكيد وجود ملف users.json
-        if (!fs.existsSync(dbPath)) {
-          fs.writeFileSync(dbPath, JSON.stringify([], null, 2));
-        }
-
-        // ✅ قراءة المستخدمين
-        let users = JSON.parse(fs.readFileSync(dbPath, "utf8"));
-
-        const exists = users.find(u => u.id === req.user.id);
-
-        if (!exists) {
-          const newUser = {
-            id: req.user.id,
+        if (!user) {
+          user = await User.create({
+            discordId: req.user.id,
             username: `${req.user.username}#${req.user.discriminator || "0000"}`,
             accessToken: req.user.accessToken,
-            refreshToken: req.user.refreshToken,
-            date: new Date().toISOString()
-          };
+            refreshToken: req.user.refreshToken
+          });
 
-          users.push(newUser);
+          console.log("✅ Mongo OAuth Saved:", user.username);
 
-          // ✅ كتابة المستخدم
-          fs.writeFileSync(dbPath, JSON.stringify(users, null, 2));
-
-          console.log(
-            `✅ OAuth SAVED -> ${newUser.username} (${newUser.id}) | Total: ${users.length}`
-          );
-
-          // ✅ إرسال لوج في ديسكورد (fetch عشان الـ cache)
+          // لوج ديسكورد
           try {
-            const logChannel = await client.channels.fetch(
-              config.logs.success
-            );
-
-            if (logChannel) {
-              await logChannel.send(
-                `✅ **OAuth Success**\n` +
-                `👤 ${newUser.username}\n` +
-                `🆔 ${newUser.id}\n` +
-                `📦 Total Stored: ${users.length}`
+            const ch = await client.channels.fetch(config.logs.success);
+            if (ch) {
+              ch.send(
+                `✅ **OAuth Success**\n👤 ${user.username}\n🆔 ${user.discordId}`
               );
             }
-          } catch (e) {
-            console.log("⚠️ Log channel not reachable or bot missing perms");
-          }
-        } else {
-          console.log(
-            `ℹ️ OAuth already exists -> ${req.user.username} (${req.user.id})`
-          );
+          } catch {}
         }
 
-        // ✅ صفحة نجاح واضحة
         res.send(`
-          <html>
-            <body style="font-family: Arial; text-align:center; margin-top:50px;">
-              <h2>✅ OAuth Successful</h2>
-              <p>You can now close this page.</p>
-              <p>Total stored users (runtime): <b>${users.length}</b></p>
-            </body>
-          </html>
+          <h2>✅ OAuth Successful</h2>
+          <p>You can close this page.</p>
         `);
+
       } catch (err) {
-        console.error("❌ OAuth callback error:", err);
-        res.status(500).send("❌ Error during OAuth callback");
+        console.error("❌ OAuth Mongo Error:", err);
+        res.send("❌ Error saving OAuth");
       }
     }
   );

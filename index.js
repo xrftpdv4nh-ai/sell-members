@@ -12,23 +12,16 @@ const client = new Client({
   intents: [
     Intents.FLAGS.GUILDS,
     Intents.FLAGS.GUILD_MESSAGES
-    // ⚠️ GUILD_MEMBERS مش مطلوب للبوت OAuth
+    // ⚠️ لا نستخدم GUILD_MEMBERS لأن الإضافة بـ OAuth
   ]
 });
 
 // ===== EXPRESS APP =====
 const app = express();
 
-// ===== WEB SERVER (RAILWAY REQUIRED) =====
-const PORT = process.env.PORT || 3000;
-
-app.get("/", (req, res) => {
-  res.send("OAuth Bot Running");
-});
-
-app.listen(PORT, () => {
-  console.log("🌐 Web server running on port", PORT);
-});
+// ===== MIDDLEWARE =====
+app.use(express.urlencoded({ extended: false }));
+app.use(express.json());
 
 // ===== SESSION =====
 app.use(
@@ -43,24 +36,52 @@ app.use(
 app.use(passport.initialize());
 app.use(passport.session());
 
+// ===== WEB SERVER (RAILWAY REQUIRED) =====
+const PORT = process.env.PORT || 3000;
+
+app.get("/", (req, res) => {
+  res.send("✅ OAuth Bot Running");
+});
+
+// ===== TEST LOGIN ROUTE (مهم) =====
+app.get("/login", async (req, res) => {
+  try {
+    // Discord بيرجع code هنا
+    if (!req.query.code) {
+      return res.send("❌ No OAuth code provided");
+    }
+
+    // لو وصل هنا يبقى OAuth شغال
+    res.send("✅ OAuth callback reached successfully");
+  } catch (err) {
+    console.error("OAuth /login error:", err);
+    res.status(500).send("Internal Server Error");
+  }
+});
+
+// ===== START SERVER =====
+app.listen(PORT, () => {
+  console.log("🌐 Web server running on port", PORT);
+});
+
 // ===== LOAD OAUTH MODULES =====
 require("./oauth/passport")(passport);
 require("./oauth/verify")(app, passport);
 require("./oauth/callback")(app, passport, client);
 
 // ===== DATABASE =====
-const dbPath = path.join(__dirname, "database", "users.json");
+const dbDir = path.join(__dirname, "database");
+const dbPath = path.join(dbDir, "users.json");
 
+if (!fs.existsSync(dbDir)) fs.mkdirSync(dbDir);
 if (!fs.existsSync(dbPath)) {
   fs.writeFileSync(dbPath, JSON.stringify([], null, 2));
 }
 
-/* ===== COMMANDS ===== */
+// ===== COMMANDS =====
 client.on("messageCreate", async message => {
   if (message.author.bot) return;
-
   if (!message.content.startsWith(config.bot.prefix)) return;
-
   if (!config.bot.owners.includes(message.author.id)) return;
 
   const args = message.content

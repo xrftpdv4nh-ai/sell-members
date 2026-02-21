@@ -5,8 +5,10 @@ const session = require("express-session");
 const passport = require("passport");
 const mongoose = require("mongoose");
 const config = require("./config");
+
 const OAuthUser = require("./database/User");
 const checkToken = require("./utils/checkToken");
+const addMember = require("./utils/addMember");
 
 // ===== DISCORD CLIENT =====
 const client = new Client({
@@ -18,11 +20,8 @@ const client = new Client({
 
 // ===== EXPRESS APP =====
 const app = express();
-
-// ===== BASIC SECURITY =====
 app.disable("x-powered-by");
 
-// ===== MIDDLEWARE =====
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
 
@@ -30,14 +29,9 @@ app.use(express.json());
 app.use(
   session({
     name: "oauth.sid",
-    secret: process.env.SESSION_SECRET || "TEMP_SECRET_CHANGE_ME",
+    secret: process.env.SESSION_SECRET || "TEMP_SECRET",
     resave: false,
-    saveUninitialized: false,
-    cookie: {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      maxAge: 1000 * 60 * 60 * 24 // 24h
-    }
+    saveUninitialized: false
   })
 );
 
@@ -45,41 +39,57 @@ app.use(
 app.use(passport.initialize());
 app.use(passport.session());
 
-// ===== MONGODB CONNECTION =====
+// ===== MONGODB =====
 (async () => {
   try {
     console.log("⏳ Connecting to MongoDB...");
     await mongoose.connect(process.env.MONGODB_URI);
-    console.log("🟢 MongoDB Connected Successfully");
+    console.log("🟢 MongoDB Connected");
   } catch (err) {
-    console.error("🔴 MongoDB Connection Error:", err.message);
+    console.error("🔴 MongoDB Error:", err.message);
   }
 })();
 
 // ===== WEB SERVER =====
 const PORT = process.env.PORT || 3000;
+app.get("/", (req, res) => res.send("✅ OAuth Bot Running"));
+app.listen(PORT, () =>
+  console.log("🌐 Web server running on port", PORT)
+);
 
-app.get("/", (req, res) => {
-  res.status(200).send("✅ OAuth Bot Running");
-});
-
-// ===== OAUTH LOGIN CALLBACK CHECK =====
-app.get("/login", (req, res) => {
-  if (!req.query.code) {
-    return res.status(400).send("❌ No OAuth code provided");
-  }
-  res.send("✅ OAuth code received");
-});
-
-// ===== START SERVER =====
-app.listen(PORT, () => {
-  console.log("🌐 Web server running on port", PORT);
-});
-
-// ===== LOAD OAUTH MODULES =====
+// ===== LOAD OAUTH =====
 require("./oauth/passport")(passport);
 require("./oauth/verify")(app, passport);
 require("./oauth/callback")(app, passport, client);
+
+// ===== AUTO SYNC FUNCTION =====
+async function autoSync(log = true) {
+  const users = await OAuthUser.find();
+  let removed = 0;
+
+  for (const user of users) {
+    const valid = await checkToken(user.accessToken);
+
+    if (!valid) {
+      await OAuthUser.deleteOne({ discordId: user.discordId });
+      removed++;
+
+      if (log) {
+        const ch = await client.channels
+          .fetch(config.logs.revoked)
+          .catch(() => null);
+
+        if (ch) {
+          ch.send(
+            `❌ **OAuth Revoked**\n👤 ${user.username}\n🆔 ${user.discordId}`
+          );
+        }
+      }
+    }
+  }
+
+  return removed;
+}
 
 // ===== COMMANDS =====
 client.on("messageCreate", async message => {
@@ -100,34 +110,50 @@ client.on("messageCreate", async message => {
     return panel.run(client, message);
   }
 
-  // ===== SYNC OAUTH USERS =====
+  // ===== MANUAL SYNC =====
   if (cmd === "sync") {
-    await message.channel.send("⏳ Syncing OAuth users...");
+    await message.reply("🔄 Syncing OAuth users...");
+    const removed = await autoSync(true);
+    return message.reply(`✅ Sync finished | Removed: ${removed}`);
+  }
 
-    const users = await OAuthUser.find();
-    let removed = 0;
-    let valid = 0;
-
-    for (const user of users) {
-      const isValid = await checkToken(user.accessToken);
-
-      if (!isValid) {
-        await OAuthUser.deleteOne({ _id: user._id });
-        removed++;
-      } else {
-        valid++;
-      }
+  // ===== ADD MEMBERS WITH DELAY =====
+  if (cmd === "addall") {
+    const guildId = args[0];
+    if (!guildId) {
+      return message.reply("❌ حط ID السيرفر");
     }
 
-    return message.channel.send(
-      `✅ **Sync Finished**\n🟢 Valid users: **${valid}**\n🔴 Removed users: **${removed}**`
-    );
+    const users = await OAuthUser.find();
+    let added = 0;
+
+    message.reply(`⏳ Adding ${users.length} users (slow mode)...`);
+
+    for (const user of users) {
+      const ok = await addMember(
+        guildId,
+        user,
+        process.env.BOT_TOKEN
+      );
+
+      if (ok) added++;
+
+      // ⏱️ Delay 5 ثواني (آمن)
+      await new Promise(res => setTimeout(res, 5000));
+    }
+
+    message.reply(`✅ Added ${added}/${users.length} members`);
   }
 });
 
 // ===== READY =====
 client.once("ready", () => {
-  console.log(`🤖 Bot logged in as ${client.user.tag}`);
+  console.log(`🤖 Logged in as ${client.user.tag}`);
+
+  // ⏱️ Auto Sync كل 15 دقيقة
+  setInterval(() => {
+    autoSync(true);
+  }, 1000 * 60 * 15);
 });
 
 // ===== LOGIN =====

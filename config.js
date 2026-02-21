@@ -18,10 +18,10 @@ module.exports = {
 
   // ===== OAUTH =====
   oauth: {
-    loginURL: "/login",
-    callbackURL: "/callback",
-    scopes: ["identify", "guilds", "guilds.join"]
-  },
+  loginURL: "/login",
+  callbackURL: "https://sell-members-production.up.railway.app/callback",
+  scopes: ["identify", "guilds", "guilds.join"]
+}
 
   // ===== LOG CHANNELS =====
   logs: {

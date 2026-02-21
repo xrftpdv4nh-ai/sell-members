@@ -46,19 +46,13 @@ app.use(passport.session());
 // ===== MONGODB CONNECTION =====
 (async () => {
   try {
-    if (!process.env.MONGODB_URI) {
-      throw new Error("MONGODB_URI is not defined");
-    }
-
+    console.log("⏳ Connecting to MongoDB...");
     await mongoose.connect(process.env.MONGODB_URI);
-
     console.log("🟢 MongoDB Connected Successfully");
   } catch (err) {
     console.error("🔴 MongoDB Connection Error:", err.message);
-    process.exit(1); // يقفل لو الداتابيز واقعة
   }
 })();
-
 // ===== WEB SERVER =====
 const PORT = process.env.PORT || 3000;
 

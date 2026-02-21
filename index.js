@@ -55,13 +55,19 @@ if (!fs.existsSync(dbPath)) {
   fs.writeFileSync(dbPath, JSON.stringify([], null, 2));
 }
 
-// ===== COMMANDS =====
-client.on("messageCreate", async (message) => {
+/* ===== COMMANDS ===== */
+client.on("messageCreate", async message => {
   if (message.author.bot) return;
+
   if (!message.content.startsWith(config.bot.prefix)) return;
+
   if (!config.bot.owners.includes(message.author.id)) return;
 
-  const args = message.content.slice(config.bot.prefix.length).trim().split(/ +/);
+  const args = message.content
+    .slice(config.bot.prefix.length)
+    .trim()
+    .split(/ +/);
+
   const cmd = args.shift().toLowerCase();
 
   if (cmd === "panel") {

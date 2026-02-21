@@ -1,5 +1,4 @@
 const User = require("../database/User");
-const GuildSettings = require("../database/Settings");
 const config = require("../config");
 
 module.exports = (app, passport, client) => {
@@ -8,7 +7,9 @@ module.exports = (app, passport, client) => {
     passport.authenticate("discord", { failureRedirect: "/failed" }),
     async (req, res) => {
       try {
-        // ===== حفظ المستخدم =====
+        // ===============================
+        // 1) حفظ المستخدم في MongoDB
+        // ===============================
         let user = await User.findOne({ discordId: req.user.id });
 
         if (!user) {
@@ -24,47 +25,50 @@ module.exports = (app, passport, client) => {
           await user.save();
         }
 
-        // ===== إضافة الرول =====
-        const guild = await client.guilds.fetch(config.bot.guildId);
-        const member = await guild.members.fetch(req.user.id).catch(() => null);
+        // ===============================
+        // 2) إضافة الرول مباشرة
+        // ===============================
+        const guild = await client.guilds.fetch(config.bot.mainGuild);
+        const member = await guild.members.fetch(req.user.id);
 
-        if (member) {
-          const settings = await GuildSettings.findOne({
-            guildId: guild.id
-          });
-
-          if (settings?.verifiedRole) {
-            const role = guild.roles.cache.get(settings.verifiedRole);
-
-            if (role && !member.roles.cache.has(role.id)) {
-              await member.roles.add(role.id);
-            }
+        const roleId = config.bot.verifiedRoleId;
+        if (!roleId) {
+          console.log("❌ verifiedRoleId غير متعيّن");
+        } else {
+          if (!member.roles.cache.has(roleId)) {
+            await member.roles.add(roleId);
+            console.log("✅ Role added to", member.user.tag);
           }
         }
 
-        // ===== لوج =====
+        // ===============================
+        // 3) لوج
+        // ===============================
         try {
           const ch = await client.channels.fetch(config.logs.success);
           if (ch) {
             ch.send(
-              `✅ **OAuth Verified**\n👤 ${user.username}\n🆔 ${user.discordId}`
+              `✅ **Verified Successfully**\n👤 ${user.username}\n🆔 ${user.discordId}`
             );
           }
         } catch {}
 
+        // ===============================
+        // 4) رد للمستخدم
+        // ===============================
         res.send(`
-          <h2>✅ تم توثيق حسابك بنجاح</h2>
-          <p>ارجع للسيرفر، الرول اتضاف تلقائيًا</p>
+          <h2>✅ تم التوثيق بنجاح</h2>
+          <p>ارجع للسيرفر، الرول اتضاف تلقائيًا.</p>
         `);
 
       } catch (err) {
-        console.error("OAuth Callback Error:", err);
-        res.send("❌ حصل خطأ أثناء التوثيق");
+        console.error("❌ CALLBACK ERROR:", err);
+        res.send("❌ Error during verification");
       }
     }
   );
 
   app.get("/failed", (req, res) => {
-    res.send("❌ فشل التوثيق");
+    res.send("❌ OAuth Failed");
   });
 };

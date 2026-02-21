@@ -1,8 +1,8 @@
 const mongoose = require("mongoose");
 
-const settingsSchema = new mongoose.Schema({
+const schema = new mongoose.Schema({
   guildId: { type: String, unique: true },
-  verifiedRole: { type: String, default: null }
+  verifiedRole: String
 });
 
-module.exports = mongoose.model("GuildSettings", settingsSchema);
+module.exports = mongoose.model("GuildSettings", schema);

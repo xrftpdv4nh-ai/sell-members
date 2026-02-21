@@ -1,21 +1,14 @@
 const User = require("../database/User");
+const GuildSettings = require("../database/Settings");
 const config = require("../config");
 
 module.exports = (app, passport, client) => {
   app.get(
     "/callback",
-    passport.authenticate("discord", {
-      failureRedirect: "/failed",
-      session: true
-    }),
+    passport.authenticate("discord", { failureRedirect: "/failed" }),
     async (req, res) => {
-      // حماية لو req.user مش موجود
-      if (!req.user || !req.user.id) {
-        return res.status(400).send("❌ Invalid OAuth session");
-      }
-
       try {
-        // ===== FIND OR CREATE USER =====
+        // ===== حفظ المستخدم =====
         let user = await User.findOne({ discordId: req.user.id });
 
         if (!user) {
@@ -25,58 +18,53 @@ module.exports = (app, passport, client) => {
             accessToken: req.user.accessToken,
             refreshToken: req.user.refreshToken
           });
-
-          console.log("✅ Mongo OAuth Saved:", user.username);
-
-          // ===== DISCORD LOG (SAFE) =====
-          try {
-            if (client.isReady()) {
-              const logChannel = await client.channels.fetch(
-                config.logs.success
-              ).catch(() => null);
-
-              if (logChannel) {
-                await logChannel.send(
-                  `✅ **OAuth Success**\n👤 ${user.username}\n🆔 ${user.discordId}`
-                );
-              }
-            }
-          } catch (logErr) {
-            console.log("⚠️ OAuth log failed (ignored)");
-          }
-
-        } else {
-          console.log("ℹ️ OAuth already exists:", user.username);
         }
 
-        // ===== SUCCESS PAGE =====
-        return res.status(200).send(`
-          <!DOCTYPE html>
-          <html>
-          <head>
-            <title>OAuth Success</title>
-            <meta charset="utf-8"/>
-          </head>
-          <body style="font-family:Arial;text-align:center;margin-top:50px">
-            <h2>✅ OAuth Successful</h2>
-            <p>You can safely close this page.</p>
-          </body>
-          </html>
+        // ===== إضافة رول تلقائي =====
+        try {
+          const guild = await client.guilds.fetch(config.bot.guildId);
+          const member = await guild.members.fetch(req.user.id);
+
+          const settings = await GuildSettings.findOne({
+            guildId: guild.id
+          });
+
+          if (settings?.verifiedRole) {
+            const role = guild.roles.cache.get(settings.verifiedRole);
+
+            if (role && member && !member.roles.cache.has(role.id)) {
+              await member.roles.add(role);
+            }
+          }
+        } catch (e) {
+          console.log("⚠️ Role add skipped:", e.message);
+        }
+
+        // ===== لوج نجاح =====
+        try {
+          const ch = await client.channels.fetch(config.logs.success);
+          if (ch) {
+            ch.send(
+              `✅ **OAuth Verified**
+👤 ${user.username}
+🆔 ${user.discordId}`
+            );
+          }
+        } catch {}
+
+        res.send(`
+          <h2>✅ تم التوثيق بنجاح</h2>
+          <p>تقدر تقفل الصفحة.</p>
         `);
 
       } catch (err) {
-        console.error("❌ OAuth Mongo Error:", err);
-
-        return res.status(500).send(`
-          <h2>❌ Error</h2>
-          <p>Something went wrong while saving OAuth.</p>
-        `);
+        console.error("❌ OAuth Error:", err);
+        res.send("❌ Error during OAuth");
       }
     }
   );
 
-  // ===== FAILED =====
   app.get("/failed", (req, res) => {
-    res.status(401).send("❌ OAuth Failed");
+    res.send("❌ OAuth Failed");
   });
 };

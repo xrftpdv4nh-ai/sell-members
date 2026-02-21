@@ -7,7 +7,7 @@ module.exports = passport => {
       {
         clientID: config.bot.clientId,
         clientSecret: config.bot.clientSecret,
-        callbackURL: config.oauth.callbackURL, // ✅ هنا التعديل المهم
+        callbackURL: "https://sell-members-production.up.railway.app/callback", // ✅ هنا التعديل المهم
         scope: config.oauth.scopes
       },
       (accessToken, refreshToken, profile, done) => {

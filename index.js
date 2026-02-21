@@ -3,6 +3,7 @@ const { Client, Intents } = require("discord.js");
 const express = require("express");
 const session = require("express-session");
 const passport = require("passport");
+const mongoose = require("mongoose"); // ✅ MongoDB
 const fs = require("fs");
 const path = require("path");
 const config = require("./config");
@@ -36,6 +37,20 @@ app.use(
 app.use(passport.initialize());
 app.use(passport.session());
 
+// ===== MONGODB CONNECTION =====
+(async () => {
+  try {
+    await mongoose.connect(process.env.MONGODB_URI, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true
+    });
+
+    console.log("🟢 MongoDB Connected Successfully");
+  } catch (err) {
+    console.error("🔴 MongoDB Connection Error:", err);
+  }
+})();
+
 // ===== WEB SERVER (RAILWAY REQUIRED) =====
 const PORT = process.env.PORT || 3000;
 
@@ -43,20 +58,12 @@ app.get("/", (req, res) => {
   res.send("✅ OAuth Bot Running");
 });
 
-// ===== TEST LOGIN ROUTE (مهم) =====
-app.get("/login", async (req, res) => {
-  try {
-    // Discord بيرجع code هنا
-    if (!req.query.code) {
-      return res.send("❌ No OAuth code provided");
-    }
-
-    // لو وصل هنا يبقى OAuth شغال
-    res.send("✅ OAuth callback reached successfully");
-  } catch (err) {
-    console.error("OAuth /login error:", err);
-    res.status(500).send("Internal Server Error");
+// ===== TEST LOGIN ROUTE =====
+app.get("/login", (req, res) => {
+  if (!req.query.code) {
+    return res.send("❌ No OAuth code provided");
   }
+  res.send("✅ OAuth callback reached successfully");
 });
 
 // ===== START SERVER =====
@@ -68,15 +75,6 @@ app.listen(PORT, () => {
 require("./oauth/passport")(passport);
 require("./oauth/verify")(app, passport);
 require("./oauth/callback")(app, passport, client);
-
-// ===== DATABASE =====
-const dbDir = path.join(__dirname, "database");
-const dbPath = path.join(dbDir, "users.json");
-
-if (!fs.existsSync(dbDir)) fs.mkdirSync(dbDir);
-if (!fs.existsSync(dbPath)) {
-  fs.writeFileSync(dbPath, JSON.stringify([], null, 2));
-}
 
 // ===== COMMANDS =====
 client.on("messageCreate", async message => {

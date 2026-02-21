@@ -21,7 +21,7 @@ module.exports = {
   loginURL: "/login",
   callbackURL: "https://sell-members-production.up.railway.app/callback",
   scopes: ["identify", "guilds", "guilds.join"]
-}
+},
 
   // ===== LOG CHANNELS =====
   logs: {

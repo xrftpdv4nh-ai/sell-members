@@ -8,6 +8,7 @@ const fs = require("fs");
 
 const config = require("./config");
 const OAuthUser = require("./database/User");
+const GuildSettings = require("./database/Settings");
 const checkToken = require("./utils/checkToken");
 const addMember = require("./utils/addMember");
 
@@ -16,9 +17,9 @@ const client = new Client({
   intents: [
     Intents.FLAGS.GUILDS,
     Intents.FLAGS.GUILD_MESSAGES,
-    Intents.FLAGS.GUILD_MEMBERS // 🔴 مهم للرول
+    Intents.FLAGS.GUILD_MEMBERS // ✅ مهم للرول
   ],
-  partials: ["MESSAGE", "CHANNEL", "REACTION"] // 🔴 مهم للريأكشن
+  partials: ["MESSAGE", "CHANNEL", "REACTION"] // ✅ مهم للريأكشن
 });
 
 // ===== EXPRESS APP =====
@@ -141,39 +142,39 @@ client.on("messageCreate", async message => {
 client.on("messageReactionAdd", async (reaction, user) => {
   if (user.bot) return;
 
-  if (reaction.partial) await reaction.fetch();
-  if (reaction.message.partial) await reaction.message.fetch();
+  try {
+    if (reaction.partial) await reaction.fetch();
+    if (reaction.message.partial) await reaction.message.fetch();
 
-  if (reaction.emoji.name !== "✅") return;
+    if (reaction.emoji.name !== "✅") return;
 
-  const guild = reaction.message.guild;
-  if (!guild) return;
+    const guild = reaction.message.guild;
+    if (!guild) return;
 
-  const member = await guild.members.fetch(user.id).catch(() => null);
-  if (!member) return;
+    const member = await guild.members.fetch(user.id).catch(() => null);
+    if (!member) return;
 
-  const roleId = config.bot.verifiedRoleId;
-  if (!roleId) return;
+    // 🔐 تحقق OAuth
+    const oauthUser = await OAuthUser.findOne({ discordId: user.id });
+    if (!oauthUser) {
+      await reaction.users.remove(user.id).catch(() => {});
+      try {
+        await user.send(
+          "❌ لازم تعمل **اثبت نفسك** الأول قبل ما تاخد الرول."
+        );
+      } catch {}
+      return;
+    }
 
-  // 🔐 تحقق من OAuth
-  const oauthUser = await OAuthUser.findOne({ discordId: user.id });
+    // 📦 هات الرول من DB
+    const settings = await GuildSettings.findOne({ guildId: guild.id });
+    if (!settings || !settings.verifiedRole) return;
 
-  if (!oauthUser) {
-    // ❌ مش موثّق
-    await reaction.users.remove(user.id).catch(() => {});
-
-    try {
-      await user.send(
-        "❌ لازم تعمل **اثبت نفسك** الأول قبل ما تاخد الرول.\n\n🔗 استخدم زر التوثيق في السيرفر."
-      );
-    } catch {}
-
-    return;
-  }
-
-  // ✅ موثّق
-  if (!member.roles.cache.has(roleId)) {
-    await member.roles.add(roleId).catch(() => {});
+    if (!member.roles.cache.has(settings.verifiedRole)) {
+      await member.roles.add(settings.verifiedRole);
+    }
+  } catch (err) {
+    console.error("Reaction Role Error:", err);
   }
 });
 

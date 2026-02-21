@@ -55,6 +55,7 @@ app.use(passport.session());
     console.error("🔴 MongoDB Connection Error:", err.message);
   }
 })();
+
 // ===== WEB SERVER =====
 const PORT = process.env.PORT || 3000;
 
@@ -99,44 +100,27 @@ client.on("messageCreate", async message => {
     return panel.run(client, message);
   }
 
-  // ===== REFRESH OAUTH USERS =====
-  if (cmd === "refresh") {
-    await message.reply("🔄 جاري فحص مستخدمي OAuth...");
+  // ===== SYNC OAUTH USERS =====
+  if (cmd === "sync") {
+    await message.channel.send("⏳ Syncing OAuth users...");
 
     const users = await OAuthUser.find();
     let removed = 0;
+    let valid = 0;
 
     for (const user of users) {
-      const valid = await checkToken(user.accessToken);
+      const isValid = await checkToken(user.accessToken);
 
-      if (!valid) {
-        await OAuthUser.deleteOne({ discordId: user.discordId });
+      if (!isValid) {
+        await OAuthUser.deleteOne({ _id: user._id });
         removed++;
-
-        // لوج خروج
-        try {
-          const logChannel = await client.channels.fetch(
-            config.logs.failed
-          );
-
-          if (logChannel) {
-            logChannel.send(
-              `❌ **OAuth Revoked**\n👤 ${user.username}\n🆔 ${user.discordId}`
-            );
-          }
-        } catch (e) {
-          console.log("⚠️ Failed to send revoke log");
-        }
+      } else {
+        valid++;
       }
-
-      // Delay عشان API
-      await new Promise(r => setTimeout(r, 1500));
     }
 
-    return message.reply(
-      `✅ انتهى الفحص\n🗑️ تم حذف: ${removed}\n📦 المتبقي: ${
-        users.length - removed
-      }`
+    return message.channel.send(
+      `✅ **Sync Finished**\n🟢 Valid users: **${valid}**\n🔴 Removed users: **${removed}**`
     );
   }
 });

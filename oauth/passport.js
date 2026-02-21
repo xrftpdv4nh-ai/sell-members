@@ -7,13 +7,17 @@ module.exports = passport => {
       {
         clientID: config.bot.clientId,
         clientSecret: config.bot.clientSecret,
-        callbackURL: `${process.env.DOMAIN}/callback`,
+        callbackURL: config.oauth.callbackURL, // ✅ هنا التعديل المهم
         scope: config.oauth.scopes
       },
       (accessToken, refreshToken, profile, done) => {
-        profile.accessToken = accessToken;
-        profile.refreshToken = refreshToken;
-        done(null, profile);
+        return done(null, {
+          id: profile.id,
+          username: profile.username,
+          discriminator: profile.discriminator,
+          accessToken,
+          refreshToken
+        });
       }
     )
   );

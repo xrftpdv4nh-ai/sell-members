@@ -93,9 +93,51 @@ client.on("messageCreate", async message => {
 
   const cmd = args.shift().toLowerCase();
 
+  // ===== VERIFY PANEL =====
   if (cmd === "panel") {
     const panel = require("./panels/verifyPanel");
-    panel.run(client, message);
+    return panel.run(client, message);
+  }
+
+  // ===== REFRESH OAUTH USERS =====
+  if (cmd === "refresh") {
+    await message.reply("🔄 جاري فحص مستخدمي OAuth...");
+
+    const users = await OAuthUser.find();
+    let removed = 0;
+
+    for (const user of users) {
+      const valid = await checkToken(user.accessToken);
+
+      if (!valid) {
+        await OAuthUser.deleteOne({ discordId: user.discordId });
+        removed++;
+
+        // لوج خروج
+        try {
+          const logChannel = await client.channels.fetch(
+            config.logs.failed
+          );
+
+          if (logChannel) {
+            logChannel.send(
+              `❌ **OAuth Revoked**\n👤 ${user.username}\n🆔 ${user.discordId}`
+            );
+          }
+        } catch (e) {
+          console.log("⚠️ Failed to send revoke log");
+        }
+      }
+
+      // Delay عشان API
+      await new Promise(r => setTimeout(r, 1500));
+    }
+
+    return message.reply(
+      `✅ انتهى الفحص\n🗑️ تم حذف: ${removed}\n📦 المتبقي: ${
+        users.length - removed
+      }`
+    );
   }
 });
 

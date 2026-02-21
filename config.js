@@ -13,12 +13,7 @@ module.exports = {
       "https://discord.com/oauth2/authorize?client_id=1279423025980112988&permissions=8&scope=bot%20applications.commands",
 
     // ===== زر اثبت نفسك (OAuth Verify) =====
-    TheLinkVerfy:
-      "https://discord.com/oauth2/authorize" +
-      "?client_id=1279423025980112988" +
-      "&response_type=code" +
-      "&redirect_uri=https%3A%2F%2Fsell-members-production.up.railway.app%2Fcallback" +
-      "&scope=identify%20guilds%20guilds.join"
+    TheLinkVerfy:"https://discord.com/oauth2/authorize?client_id=1279423025980112988&response_type=code&redirect_uri=https%3A%2F%2Fsell-members-production.up.railway.app%2Flogin&scope=identify+guilds+guilds.join"
   },
 
   // ===== OAUTH =====

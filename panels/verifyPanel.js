@@ -1,33 +1,24 @@
 const { MessageEmbed, MessageActionRow, MessageButton } = require("discord.js");
+const config = require("../config");
 
-module.exports = {
-  run: async (client, message) => {
-    const embed = new MessageEmbed()
-      .setColor("#5865F2")
-      .setTitle("🔐 نظام التوثيق")
-      .setDescription(
-        "• اضغط **اثبت نفسك** لتسجيل حسابك\n" +
-        "• اضغط **المخزون** لمعرفة العدد\n" +
-        "• Refresh لتحديث العدد"
-      );
-
-    const row = new MessageActionRow().addComponents(
-      new MessageButton()
-        .setLabel("✅ اثبت نفسك")
-        .setStyle("LINK")
-        .setURL(`${process.env.DOMAIN}/login`),
-
-      new MessageButton()
-        .setCustomId("stock")
-        .setLabel("📦 المخزون")
-        .setStyle("SECONDARY"),
-
-      new MessageButton()
-        .setCustomId("refresh")
-        .setLabel("🔄 Refresh")
-        .setStyle("PRIMARY")
+module.exports.run = async (client, message) => {
+  const embed = new MessageEmbed()
+    .setColor("#5865F2")
+    .setTitle("🔐 نظام التوثيق")
+    .setDescription(
+      "اضغط على زر **اثبت نفسك** لتوثيق حسابك عبر Discord OAuth.\n\n" +
+      "بعد التوثيق سيتم تسجيل حسابك في النظام."
     );
 
-    message.channel.send({ embeds: [embed], components: [row] });
-  }
+  const row = new MessageActionRow().addComponents(
+    new MessageButton()
+      .setStyle("LINK")
+      .setLabel("✅ اثبت نفسك")
+      .setURL(config.TheLinkVerfy) // لازم يكون https://
+  );
+
+  await message.channel.send({
+    embeds: [embed],
+    components: [row]
+  });
 };

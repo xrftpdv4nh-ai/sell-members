@@ -110,12 +110,48 @@ client.on("messageCreate", async message => {
     return panel.run(client, message);
   }
 
-  // ===== MANUAL SYNC =====
-  if (cmd === "sync") {
-    await message.reply("🔄 Syncing OAuth users...");
-    const removed = await autoSync(true);
-    return message.reply(`✅ Sync finished | Removed: ${removed}`);
+// ===== SYNC OAUTH USERS =====
+if (cmd === "sync") {
+  await message.channel.send("🔄 **جاري مزامنة مستخدمي OAuth...**");
+
+  const users = await OAuthUser.find();
+  const totalBefore = users.length;
+
+  let removed = 0;
+  let valid = 0;
+
+  for (const user of users) {
+    const isValid = await checkToken(user.accessToken);
+
+    if (!isValid) {
+      await OAuthUser.deleteOne({ discordId: user.discordId });
+      removed++;
+
+      // لوج الخروج
+      try {
+        const ch = await client.channels.fetch(config.logs.revoked);
+        if (ch) {
+          ch.send(
+            `❌ **OAuth Revoked**\n👤 ${user.username}\n🆔 ${user.discordId}`
+          );
+        }
+      } catch {}
+    } else {
+      valid++;
+    }
   }
+
+  const totalAfter = await OAuthUser.countDocuments();
+
+  return message.channel.send(
+    `✅ **Sync Finished Successfully**
+    
+👥 قبل المزامنة: **${totalBefore}**
+🟢 مستخدمين صالحين: **${valid}**
+🔴 تم حذفهم: **${removed}**
+📦 المتبقي في الداتا: **${totalAfter}**`
+  );
+}
 
   // ===== ADD MEMBERS WITH DELAY =====
   if (cmd === "addall") {

@@ -110,6 +110,21 @@ client.on("messageCreate", async message => {
     return panel.run(client, message);
   }
 
+  // ===== SET VERIFIED ROLE =====
+if (cmd === "setrole") {
+  const role = message.mentions.roles.first();
+
+  if (!role) {
+    return message.reply("❌ منشن الرول صح\nمثال: `+setrole @Verified`");
+  }
+
+  // حفظ الرول (في runtime – نقدر نخزنه DB بعدين)
+  config.bot.verifiedRoleId = role.id;
+
+  return message.channel.send(
+    `✅ تم تعيين رول التوثيق: **${role.name}**`
+  );
+}
 // ===== SYNC OAUTH USERS =====
 if (cmd === "sync") {
   await message.channel.send("🔄 **جاري مزامنة مستخدمي OAuth...**");

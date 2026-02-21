@@ -16,8 +16,9 @@ const client = new Client({
   intents: [
     Intents.FLAGS.GUILDS,
     Intents.FLAGS.GUILD_MESSAGES,
-    Intents.FLAGS.GUILD_MEMBERS // 🔴 مهم لإضافة الرول
-  ]
+    Intents.FLAGS.GUILD_MEMBERS // 🔴 مهم للرول
+  ],
+  partials: ["MESSAGE", "CHANNEL", "REACTION"] // 🔴 مهم للريأكشن
 });
 
 // ===== EXPRESS APP =====
@@ -133,6 +134,46 @@ client.on("messageCreate", async message => {
   } catch (err) {
     console.error(err);
     message.reply("❌ حصل خطأ أثناء تنفيذ الأمر");
+  }
+});
+
+// ===== REACTION ROLE + OAUTH CHECK =====
+client.on("messageReactionAdd", async (reaction, user) => {
+  if (user.bot) return;
+
+  if (reaction.partial) await reaction.fetch();
+  if (reaction.message.partial) await reaction.message.fetch();
+
+  if (reaction.emoji.name !== "✅") return;
+
+  const guild = reaction.message.guild;
+  if (!guild) return;
+
+  const member = await guild.members.fetch(user.id).catch(() => null);
+  if (!member) return;
+
+  const roleId = config.bot.verifiedRoleId;
+  if (!roleId) return;
+
+  // 🔐 تحقق من OAuth
+  const oauthUser = await OAuthUser.findOne({ discordId: user.id });
+
+  if (!oauthUser) {
+    // ❌ مش موثّق
+    await reaction.users.remove(user.id).catch(() => {});
+
+    try {
+      await user.send(
+        "❌ لازم تعمل **اثبت نفسك** الأول قبل ما تاخد الرول.\n\n🔗 استخدم زر التوثيق في السيرفر."
+      );
+    } catch {}
+
+    return;
+  }
+
+  // ✅ موثّق
+  if (!member.roles.cache.has(roleId)) {
+    await member.roles.add(roleId).catch(() => {});
   }
 });
 

@@ -5,6 +5,8 @@ const session = require("express-session");
 const passport = require("passport");
 const mongoose = require("mongoose");
 const config = require("./config");
+const OAuthUser = require("./database/User");
+const checkToken = require("./utils/checkToken");
 
 // ===== DISCORD CLIENT =====
 const client = new Client({

@@ -10,14 +10,20 @@ module.exports = (app, passport, client) => {
     }),
     async (req, res) => {
       try {
-        const dbPath = path.join(__dirname, "..", "database", "users.json");
+        const dbDir = path.join(__dirname, "..", "database");
+        const dbPath = path.join(dbDir, "users.json");
 
-        // تأكيد وجود الملف
+        // ✅ تأكيد وجود فولدر database
+        if (!fs.existsSync(dbDir)) {
+          fs.mkdirSync(dbDir, { recursive: true });
+        }
+
+        // ✅ تأكيد وجود ملف users.json
         if (!fs.existsSync(dbPath)) {
           fs.writeFileSync(dbPath, JSON.stringify([], null, 2));
         }
 
-        // قراءة المستخدمين
+        // ✅ قراءة المستخدمين
         let users = JSON.parse(fs.readFileSync(dbPath, "utf8"));
 
         const exists = users.find(u => u.id === req.user.id);
@@ -32,36 +38,50 @@ module.exports = (app, passport, client) => {
           };
 
           users.push(newUser);
+
+          // ✅ كتابة المستخدم
           fs.writeFileSync(dbPath, JSON.stringify(users, null, 2));
 
-          console.log(`✅ SAVED OAuth: ${newUser.username} (${newUser.id})`);
+          console.log(
+            `✅ OAuth SAVED -> ${newUser.username} (${newUser.id}) | Total: ${users.length}`
+          );
 
-          // إرسال لوج (بأمان)
+          // ✅ إرسال لوج في ديسكورد (fetch عشان الـ cache)
           try {
-            const logChannel = await client.channels.fetch(config.logs.success);
+            const logChannel = await client.channels.fetch(
+              config.logs.success
+            );
+
             if (logChannel) {
-              logChannel.send(
-                `✅ **OAuth Success**\n👤 ${newUser.username}\n🆔 ${newUser.id}\n📦 Total: ${users.length}`
+              await logChannel.send(
+                `✅ **OAuth Success**\n` +
+                `👤 ${newUser.username}\n` +
+                `🆔 ${newUser.id}\n` +
+                `📦 Total Stored: ${users.length}`
               );
             }
           } catch (e) {
-            console.log("⚠️ Log channel not reachable");
+            console.log("⚠️ Log channel not reachable or bot missing perms");
           }
-
         } else {
-          console.log(`ℹ️ OAuth already exists: ${req.user.username}`);
+          console.log(
+            `ℹ️ OAuth already exists -> ${req.user.username} (${req.user.id})`
+          );
         }
 
-        // صفحة نجاح واضحة
+        // ✅ صفحة نجاح واضحة
         res.send(`
-          <h2>✅ OAuth Successful</h2>
-          <p>You can now close this page.</p>
-          <p>Total stored users: <b>${users.length}</b></p>
+          <html>
+            <body style="font-family: Arial; text-align:center; margin-top:50px;">
+              <h2>✅ OAuth Successful</h2>
+              <p>You can now close this page.</p>
+              <p>Total stored users (runtime): <b>${users.length}</b></p>
+            </body>
+          </html>
         `);
-
       } catch (err) {
         console.error("❌ OAuth callback error:", err);
-        res.send("❌ Error during OAuth callback");
+        res.status(500).send("❌ Error during OAuth callback");
       }
     }
   );

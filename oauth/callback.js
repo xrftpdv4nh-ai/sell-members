@@ -4,9 +4,18 @@ const config = require("../config");
 module.exports = (app, passport, client) => {
   app.get(
     "/callback",
-    passport.authenticate("discord", { failureRedirect: "/failed" }),
+    passport.authenticate("discord", {
+      failureRedirect: "/failed",
+      session: true
+    }),
     async (req, res) => {
+      // حماية لو req.user مش موجود
+      if (!req.user || !req.user.id) {
+        return res.status(400).send("❌ Invalid OAuth session");
+      }
+
       try {
+        // ===== FIND OR CREATE USER =====
         let user = await User.findOne({ discordId: req.user.id });
 
         if (!user) {
@@ -19,30 +28,55 @@ module.exports = (app, passport, client) => {
 
           console.log("✅ Mongo OAuth Saved:", user.username);
 
-          // لوج ديسكورد
+          // ===== DISCORD LOG (SAFE) =====
           try {
-            const ch = await client.channels.fetch(config.logs.success);
-            if (ch) {
-              ch.send(
-                `✅ **OAuth Success**\n👤 ${user.username}\n🆔 ${user.discordId}`
-              );
+            if (client.isReady()) {
+              const logChannel = await client.channels.fetch(
+                config.logs.success
+              ).catch(() => null);
+
+              if (logChannel) {
+                await logChannel.send(
+                  `✅ **OAuth Success**\n👤 ${user.username}\n🆔 ${user.discordId}`
+                );
+              }
             }
-          } catch {}
+          } catch (logErr) {
+            console.log("⚠️ OAuth log failed (ignored)");
+          }
+
+        } else {
+          console.log("ℹ️ OAuth already exists:", user.username);
         }
 
-        res.send(`
-          <h2>✅ OAuth Successful</h2>
-          <p>You can close this page.</p>
+        // ===== SUCCESS PAGE =====
+        return res.status(200).send(`
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <title>OAuth Success</title>
+            <meta charset="utf-8"/>
+          </head>
+          <body style="font-family:Arial;text-align:center;margin-top:50px">
+            <h2>✅ OAuth Successful</h2>
+            <p>You can safely close this page.</p>
+          </body>
+          </html>
         `);
 
       } catch (err) {
         console.error("❌ OAuth Mongo Error:", err);
-        res.send("❌ Error saving OAuth");
+
+        return res.status(500).send(`
+          <h2>❌ Error</h2>
+          <p>Something went wrong while saving OAuth.</p>
+        `);
       }
     }
   );
 
+  // ===== FAILED =====
   app.get("/failed", (req, res) => {
-    res.send("❌ OAuth Failed");
+    res.status(401).send("❌ OAuth Failed");
   });
 };

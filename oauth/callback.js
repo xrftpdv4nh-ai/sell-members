@@ -1,14 +1,22 @@
 const User = require("../database/User");
-const GuildSettings = require("../database/Settings");
 const config = require("../config");
 
 module.exports = (app, passport, client) => {
+
   app.get(
     "/callback",
-    passport.authenticate("discord", { failureRedirect: "/failed" }),
+    passport.authenticate("discord", {
+      failureRedirect: "/failed",
+      session: false
+    }),
     async (req, res) => {
       try {
-        // حفظ المستخدم
+        // 🔴 تأكيد إن Passport رجّع user
+        if (!req.user || !req.user.id) {
+          return res.status(400).send("❌ Invalid OAuth data");
+        }
+
+        // 🔎 شوف المستخدم موجود ولا لأ
         let user = await User.findOne({ discordId: req.user.id });
 
         if (!user) {
@@ -19,54 +27,49 @@ module.exports = (app, passport, client) => {
             refreshToken: req.user.refreshToken
           });
         } else {
-          // تحديث التوكن لو موجود
+          // تحديث التوكن لو المستخدم موجود
           user.accessToken = req.user.accessToken;
           user.refreshToken = req.user.refreshToken;
           await user.save();
         }
 
-        // ===== إضافة الرول =====
-        const guild = await client.guilds.fetch(config.bot.mainGuild);
-        const member = await guild.members.fetch(req.user.id).catch(() => null);
+        // ✅ Log نجاح (من غير كراش)
+        if (client.isReady()) {
+          const ch = await client.channels
+            .fetch(config.logs.success)
+            .catch(() => null);
 
-        if (member) {
-          const settings = await GuildSettings.findOne({
-            guildId: guild.id
-          });
-
-          if (settings?.verifiedRole) {
-            const role = guild.roles.cache.get(settings.verifiedRole);
-
-            if (role && !member.roles.cache.has(role.id)) {
-              await member.roles.add(role.id);
-            }
+          if (ch) {
+            ch.send(
+              `✅ **OAuth Success**\n👤 ${user.username}\n🆔 ${user.discordId}`
+            );
           }
         }
 
-        // ===== لوج =====
-        try {
-          const ch = await client.channels.fetch(config.logs.success);
-          if (ch) {
-            ch.send(
-              `✅ **OAuth Verified**\n👤 ${user.username}\n🆔 ${user.discordId}`
-            );
-          }
-        } catch {}
-
-        // صفحة النجاح
-        res.send(`
-          <h2>✅ تم توثيق حسابك بنجاح</h2>
-          <p>تقدر تقفل الصفحة وترجع للسيرفر</p>
+        // ✅ صفحة نجاح بسيطة
+        return res.send(`
+          <html>
+            <head>
+              <title>Verified</title>
+            </head>
+            <body style="text-align:center;font-family:sans-serif">
+              <h2>✅ تم التوثيق بنجاح</h2>
+              <p>ارجع للسيرفر وهتاخد الرول تلقائيًا.</p>
+              <script>
+                setTimeout(() => window.close(), 3000);
+              </script>
+            </body>
+          </html>
         `);
 
       } catch (err) {
-        console.error("OAuth Callback Error:", err);
-        res.send("❌ حصل خطأ أثناء التوثيق");
+        console.error("❌ Callback Error:", err);
+        return res.status(500).send("❌ Error during verification");
       }
     }
   );
 
   app.get("/failed", (req, res) => {
-    res.send("❌ فشل التوثيق");
+    res.status(401).send("❌ OAuth Failed");
   });
 };

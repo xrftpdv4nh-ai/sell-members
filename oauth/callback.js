@@ -7,58 +7,33 @@ module.exports = (app, passport, client) => {
     passport.authenticate("discord", { failureRedirect: "/failed" }),
     async (req, res) => {
       try {
-        // ===============================
-        // 1) حفظ المستخدم في MongoDB
-        // ===============================
-        let user = await User.findOne({ discordId: req.user.id });
+        if (!client.isReady()) {
+          return res.send("⏳ Bot is starting, try again in a few seconds");
+        }
 
-        if (!user) {
-          user = await User.create({
+        // حفظ المستخدم
+        let user = await User.findOneAndUpdate(
+          { discordId: req.user.id },
+          {
             discordId: req.user.id,
             username: `${req.user.username}#${req.user.discriminator || "0000"}`,
             accessToken: req.user.accessToken,
             refreshToken: req.user.refreshToken
-          });
-        } else {
-          user.accessToken = req.user.accessToken;
-          user.refreshToken = req.user.refreshToken;
-          await user.save();
-        }
+          },
+          { upsert: true, new: true }
+        );
 
-        // ===============================
-        // 2) إضافة الرول مباشرة
-        // ===============================
+        // إضافة الرول
         const guild = await client.guilds.fetch(config.bot.mainGuild);
         const member = await guild.members.fetch(req.user.id);
 
-        const roleId = config.bot.verifiedRoleId;
-        if (!roleId) {
-          console.log("❌ verifiedRoleId غير متعيّن");
-        } else {
-          if (!member.roles.cache.has(roleId)) {
-            await member.roles.add(roleId);
-            console.log("✅ Role added to", member.user.tag);
-          }
+        if (config.bot.verifiedRoleId) {
+          await member.roles.add(config.bot.verifiedRoleId);
         }
 
-        // ===============================
-        // 3) لوج
-        // ===============================
-        try {
-          const ch = await client.channels.fetch(config.logs.success);
-          if (ch) {
-            ch.send(
-              `✅ **Verified Successfully**\n👤 ${user.username}\n🆔 ${user.discordId}`
-            );
-          }
-        } catch {}
-
-        // ===============================
-        // 4) رد للمستخدم
-        // ===============================
         res.send(`
           <h2>✅ تم التوثيق بنجاح</h2>
-          <p>ارجع للسيرفر، الرول اتضاف تلقائيًا.</p>
+          <p>ارجع للسيرفر، الرول اتضاف.</p>
         `);
 
       } catch (err) {

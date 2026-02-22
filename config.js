@@ -34,7 +34,7 @@ module.exports = {
   // ===== LOG CHANNELS =====
   logs: {
     success: "1474150012228210868", // oauth success
-    failed: "1474150017810829312"   // oauth failed
+    failed: "1474150017810829312",  // oauth failed
   },
 
   // ===== MEMBERS SETTINGS =====

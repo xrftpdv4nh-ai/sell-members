@@ -1,4 +1,5 @@
 const User = require("../database/User");
+const GuildSettings = require("../database/Settings");
 const config = require("../config");
 
 module.exports = (app, passport, client) => {
@@ -11,12 +12,16 @@ module.exports = (app, passport, client) => {
     }),
     async (req, res) => {
       try {
-        // 🔴 تأكيد إن Passport رجّع user
+        // =============================
+        // 1️⃣ تأكيد بيانات OAuth
+        // =============================
         if (!req.user || !req.user.id) {
           return res.status(400).send("❌ Invalid OAuth data");
         }
 
-        // 🔎 شوف المستخدم موجود ولا لأ
+        // =============================
+        // 2️⃣ حفظ / تحديث المستخدم
+        // =============================
         let user = await User.findOne({ discordId: req.user.id });
 
         if (!user) {
@@ -27,13 +32,45 @@ module.exports = (app, passport, client) => {
             refreshToken: req.user.refreshToken
           });
         } else {
-          // تحديث التوكن لو المستخدم موجود
           user.accessToken = req.user.accessToken;
           user.refreshToken = req.user.refreshToken;
           await user.save();
         }
 
-        // ✅ Log نجاح (من غير كراش)
+        // =============================
+        // 3️⃣ إضافة الرول تلقائيًا
+        // =============================
+        try {
+          if (client.isReady()) {
+            const guild = await client.guilds
+              .fetch(config.bot.guildId)
+              .catch(() => null);
+
+            if (guild) {
+              const member = await guild.members
+                .fetch(req.user.id)
+                .catch(() => null);
+
+              if (member) {
+                const settings = await GuildSettings.findOne({
+                  guildId: guild.id
+                });
+
+                if (settings && settings.verifiedRoleId) {
+                  if (!member.roles.cache.has(settings.verifiedRoleId)) {
+                    await member.roles.add(settings.verifiedRoleId);
+                  }
+                }
+              }
+            }
+          }
+        } catch (e) {
+          console.log("⚠️ Role add skipped:", e.message);
+        }
+
+        // =============================
+        // 4️⃣ لوج النجاح
+        // =============================
         if (client.isReady()) {
           const ch = await client.channels
             .fetch(config.logs.success)
@@ -46,7 +83,9 @@ module.exports = (app, passport, client) => {
           }
         }
 
-        // ✅ صفحة نجاح بسيطة
+        // =============================
+        // 5️⃣ صفحة نجاح
+        // =============================
         return res.send(`
           <html>
             <head>

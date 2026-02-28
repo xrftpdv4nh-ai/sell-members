@@ -6,7 +6,7 @@ module.exports = {
     clientSecret: "m9CmE9FRoOFdOGyJRniktK-9E3vfirKq", // ⚠️ يفضل تخليه ENV بعدين
 
     prefix: "+",
-    owners: ["1035345058561540127"],
+    owners: ["1390605342043406446"],
 
     // ===== السيرفر الأساسي =====
     guildId: "1291946536019693599", // ✅ ID السيرفر اللي الرول هيتضاف فيه

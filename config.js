@@ -2,7 +2,7 @@ module.exports = {
   bot: {
     // ===== BOT =====
     token: process.env.BOT_TOKEN, // ⬅️ توكن البوت من Railway
-    clientId: "1279423025980112988",
+    clientId: "1035345058561540127",
     clientSecret: "m9CmE9FRoOFdOGyJRniktK-9E3vfirKq", // ⚠️ يفضل تخليه ENV بعدين
 
     prefix: "+",
